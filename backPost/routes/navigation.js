@@ -42,6 +42,15 @@ router.get('/', (req, res) => {
         });
       });
 
+      // 对每个分类下的站点按照 sort_order 排序
+      Object.keys(sitesByCategory).forEach(categoryId => {
+        sitesByCategory[categoryId].sort((a, b) => {
+          const siteA = sites.find(s => s.url === a.url);
+          const siteB = sites.find(s => s.url === b.url);
+          return (siteA?.sort_order || 0) - (siteB?.sort_order || 0);
+        });
+      });
+
       const categoryMap = {};
       const navigationData = [];
       const categoryTree = {};

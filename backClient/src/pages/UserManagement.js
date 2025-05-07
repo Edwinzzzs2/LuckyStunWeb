@@ -160,17 +160,16 @@ const UserManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 120,
       render: (_, record) => (
-        <Space size="middle">
+        <Space size="small">
           <Button
-            type="link"
+            type="text"
             icon={<EditOutlined />}
             onClick={() => showPasswordModal(record)}
             disabled={loading}
-          >
-            修改密码
-          </Button>
+            title="修改密码"
+          />
           <Popconfirm
             title={`确定删除用户 "${record.username}" 吗?`}
             onConfirm={() => handleDelete(record.id)}
@@ -178,9 +177,13 @@ const UserManagement = () => {
             cancelText="取消"
             disabled={loading}
           >
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={loading}>
-              删除
-            </Button>
+            <Button 
+              type="text" 
+              danger 
+              icon={<DeleteOutlined />} 
+              disabled={loading}
+              title="删除用户"
+            />
           </Popconfirm>
         </Space>
       ),
@@ -204,25 +207,50 @@ const UserManagement = () => {
   return (
     <div>
       {contextHolder}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 0 }}>后台管理</Title>
-        <Space>
-          <Button
-            icon={<SyncOutlined spin={loading} />}
-            onClick={checkAdminAndFetchUsers}
-            disabled={loading}
-          >
-            刷新
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={showCreateModal}
-            disabled={loading}
-          >
-            新增用户
-          </Button>
-        </Space>
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '16px', 
+          marginBottom: 16 
+        }}
+      >
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            width: '100%' 
+          }}
+        >
+          <Title level={2} style={{ margin: 0 }}>后台管理</Title>
+        </div>
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            alignItems: 'center', 
+            width: '100%' 
+          }}
+        >
+          <Space>
+            <Button
+              icon={<SyncOutlined spin={loading} />}
+              onClick={checkAdminAndFetchUsers}
+              disabled={loading}
+            >
+              刷新
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={showCreateModal}
+              disabled={loading}
+            >
+              新增用户
+            </Button>
+          </Space>
+        </div>
       </div>
 
       <Table
@@ -240,8 +268,40 @@ const UserManagement = () => {
         onCancel={handleCreateCancel}
         confirmLoading={loading}
         destroyOnClose
+        width={500}
+        bodyStyle={{ 
+          maxHeight: '50vh', 
+          overflowY: 'auto' 
+        }}
+        modalRender={(modal) => (
+          <div style={{ 
+            padding: '16px', 
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '70vh', 
+            maxHeight: '70vh'
+          }}>
+            <div style={{ 
+              flex: '1', 
+              overflowY: 'auto',
+              paddingRight: '8px' 
+            }}>
+              {modal}
+            </div>
+          </div>
+        )}
       >
-        <Form form={createUserForm} layout="vertical" name="create_user_form">
+        <Form 
+          form={createUserForm} 
+          layout="vertical" 
+          name="create_user_form"
+          requiredMark={false}
+          style={{ 
+            maxWidth: '100%', 
+            padding: '0 8px' 
+          }}
+        >
           <Form.Item
             name="username"
             label="用户名"
@@ -276,8 +336,40 @@ const UserManagement = () => {
         onCancel={handlePasswordCancel}
         confirmLoading={loading}
         destroyOnClose
+        width={500}
+        bodyStyle={{ 
+          maxHeight: '50vh', 
+          overflowY: 'auto' 
+        }}
+        modalRender={(modal) => (
+          <div style={{ 
+            padding: '16px', 
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '70vh', 
+            maxHeight: '70vh'
+          }}>
+            <div style={{ 
+              flex: '1', 
+              overflowY: 'auto',
+              paddingRight: '8px' 
+            }}>
+              {modal}
+            </div>
+          </div>
+        )}
       >
-        <Form form={updatePasswordForm} layout="vertical" name="update_password_form">
+        <Form 
+          form={updatePasswordForm} 
+          layout="vertical" 
+          name="update_password_form"
+          requiredMark={false}
+          style={{ 
+            maxWidth: '100%', 
+            padding: '0 8px' 
+          }}
+        >
           <Form.Item
             name="newPassword"
             label="新密码"

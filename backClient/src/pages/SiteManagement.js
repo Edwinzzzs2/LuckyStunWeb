@@ -12,6 +12,7 @@ import {
   Popconfirm,
   Space,
   Avatar,
+  Switch,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, SwapOutlined } from '@ant-design/icons';
 import { getSites, getCategoriesFlat, createSite, updateSite, deleteSite, batchUpdateSiteCategory } from '../services/api';
@@ -107,7 +108,13 @@ const SiteManagement = () => {
 
   // 定义表格列
   const columns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+    { 
+      title: '序号', 
+      key: 'index', 
+      width: 80, 
+      render: (text, record, index) => index + 1 
+    },
+    // { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
     {
       title: 'Logo',
       dataIndex: 'logo',
@@ -136,17 +143,27 @@ const SiteManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 100,
       render: (_, record) => (
-        <Space size="middle">
-          <Button type="link" icon={<EditOutlined />} onClick={() => showModal(record)}>编辑</Button>
+        <Space size="small">
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => showModal(record)}
+            title="编辑"
+          />
           <Popconfirm
             title={`确定删除网站 "${record.title}" 吗?`}
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+            <Button 
+              type="text" 
+              danger 
+              icon={<DeleteOutlined />}
+              title="删除"
+            />
           </Popconfirm>
         </Space>
       ),
@@ -156,39 +173,68 @@ const SiteManagement = () => {
   return (
     <div>
       {contextHolder}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 0 }}>网站管理</Title>
-        <Space>
-          {selectedRowKeys.length > 0 && (
-            <Select
-              placeholder="选择目标分类"
-              style={{ width: 200 }}
-              onChange={async (categoryId) => {
-                try {
-                  setLoading(true);
-                  const response = await batchUpdateSiteCategory({
-                    site_ids: selectedRowKeys,
-                    category_id: categoryId
-                  });
-                  messageApi.success(`成功更新 ${response.data.affected_rows} 个站点的分类`);
-                  setSelectedRowKeys([]);
-                  fetchData();
-                } catch (error) {
-                  messageApi.error(`批量更新失败: ${error.response?.data?.message || '请稍后重试'}`);
-                } finally {
-                  setLoading(false);
-                }
-              }}
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '16px', 
+          marginBottom: 16 
+        }}
+      >
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            width: '100%' 
+          }}
+        >
+          <Title level={2} style={{ margin: 0 }}>网站管理</Title>
+        </div>
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            alignItems: 'center', 
+            width: '100%' 
+          }}
+        >
+          <Space>
+            {selectedRowKeys.length > 0 && (
+              <Select
+                placeholder="选择目标分类"
+                style={{ width: 200 }}
+                onChange={async (categoryId) => {
+                  try {
+                    setLoading(true);
+                    const response = await batchUpdateSiteCategory({
+                      site_ids: selectedRowKeys,
+                      category_id: categoryId
+                    });
+                    messageApi.success(`成功更新 ${response.data.affected_rows} 个站点的分类`);
+                    setSelectedRowKeys([]);
+                    fetchData();
+                  } catch (error) {
+                    messageApi.error(`批量更新失败: ${error.response?.data?.message || '请稍后重试'}`);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                {categories.map(cat => (
+                  <Select.Option key={cat.id} value={cat.id}>{cat.name}</Select.Option>
+                ))}
+              </Select>
+            )}
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={() => showModal()}
             >
-              {categories.map(cat => (
-                <Select.Option key={cat.id} value={cat.id}>{cat.name}</Select.Option>
-              ))}
-            </Select>
-          )}
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-            添加网站
-          </Button>
-        </Space>
+              添加网站
+            </Button>
+          </Space>
+        </div>
       </div>
 
       <Table
@@ -196,14 +242,28 @@ const SiteManagement = () => {
         dataSource={sites}
         loading={loading}
         rowKey="id"
-        pagination={{ pageSize: 10 }} // 可以添加分页
-        scroll={{ x: 'max-content' }} // 如果列数较多，允许横向滚动
+        pagination={{ 
+          pageSize: sites.length, 
+          showSizeChanger: false, 
+          hideOnSinglePage: true 
+        }} 
+        scroll={{ 
+          x: 'max-content', // 确保内容宽度足够
+          y: 'calc(100vh - 380px)' // 动态计算高度，减去页面其他元素的高度
+        }}
+        style={{
+          width: '100%',
+          overflowX: 'auto' // 强制横向滚动
+        }}
         rowSelection={{
           selectedRowKeys,
           onChange: (newSelectedRowKeys) => {
             setSelectedRowKeys(newSelectedRowKeys);
           },
         }}
+        // 添加响应式配置
+        responsive={true}
+        tableLayout="fixed" // 固定布局
       />
 
       {/* 新增/编辑网站的 Modal */}
@@ -214,50 +274,131 @@ const SiteManagement = () => {
         onCancel={handleCancel}
         confirmLoading={loading}
         destroyOnClose
-        width={600} // 可以适当调整 Modal 宽度
+        width={500} 
+        bodyStyle={{ 
+          maxHeight: '50vh', // 减小最大高度
+          overflowY: 'auto', // 超出部分可滚动
+          // paddingBottom: '60px' // 为底部按钮预留空间
+        }}
+        modalRender={(modal) => (
+          <div style={{ 
+            padding: '16px', 
+            borderRadius: '8px', 
+            // boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '70vh', // 固定总高度
+            maxHeight: '70vh'
+          }}>
+            <div style={{ 
+              flex: '1', 
+              overflowY: 'auto',
+              paddingRight: '8px' 
+            }}>
+              {modal}
+            </div>
+          </div>
+        )}
+        footer={[
+          <Button key="cancel" onClick={handleCancel}>
+            取消
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            loading={loading} 
+            onClick={handleOk}
+          >
+            确定
+          </Button>
+        ]}
       >
-        <Form form={form} layout="vertical" name="site_form">
+        <Form 
+          form={form} 
+          layout="vertical" 
+          name="site_form"
+          requiredMark={false}
+          style={{ 
+            maxWidth: '100%', 
+            padding: '0 8px' 
+          }}
+        >
           <Form.Item
             name="title"
             label="网站标题"
             rules={[{ required: true, message: '请输入网站标题!' }]}
           >
-            <Input />
+            <Input placeholder="输入网站标题" />
           </Form.Item>
           <Form.Item
             name="url"
             label="网站 URL"
-            rules={[{ required: true, message: '请输入网站 URL!' }, { type: 'url', message: '请输入有效的 URL!' }]}
+            rules={[
+              { required: true, message: '请输入网站 URL!' }, 
+              { type: 'url', message: '请输入有效的 URL!' }
+            ]}
           >
-            <Input placeholder="例如：https://www.example.com" />
+            <Input placeholder="https://www.example.com" />
           </Form.Item>
           <Form.Item
             name="category_id"
             label="所属分类"
             rules={[{ required: true, message: '请选择所属分类!' }]}
           >
-            <Select showSearch placeholder="选择或搜索分类" optionFilterProp="children"
-             filterOption={(input, option) =>
-                (option?.children ?? '').toLowerCase().includes(input.toLowerCase()) // 修正 filterOption, antd v5 option.children 不是直接的 string
-              }>
+            <Select 
+              showSearch 
+              placeholder="选择分类" 
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
               {categories.map(cat => (
-                <Option key={cat.id} value={cat.id}>{cat.name}</Option>
+                <Select.Option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </Select.Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item 
-          name="logo"
-           label="网站 Logo (URL)"
-        //   rules={[{ type: 'url', message: '请输入有效的 URL!' }]}
+            name="logo"
+            label="网站 Logo (URL)"
           >
-            <Input placeholder="输入 Logo 图片的 URL" />
+            <Input placeholder="Logo 图片 URL" />
           </Form.Item>
           <Form.Item name="desc" label="网站描述">
-            <Input.TextArea rows={3} />
+            <Input.TextArea 
+              rows={3} 
+              placeholder="输入网站简介"
+            />
           </Form.Item>
-          <Form.Item name="sort_order" label="排序" initialValue={0}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+          <Form.Item 
+            name="sort_order" 
+            label="排序" 
+            initialValue={0}
+          >
+            <InputNumber 
+              min={0} 
+              style={{ width: '100%' }} 
+              placeholder="数字越小越靠前"
+            />
           </Form.Item>
+
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+            <span style={{ marginRight: '8px' }}>自动更新端口:</span>
+            <Form.Item
+              name="update_port_enabled"
+              valuePropName="checked"
+              initialValue={true}
+              style={{ marginBottom: 0 }}
+            >
+              <Switch
+                defaultChecked 
+                checkedChildren="开启" 
+                unCheckedChildren="关闭" 
+              />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
     </div>

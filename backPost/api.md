@@ -302,9 +302,9 @@
   - 500 ：服务器内部错误
 
 ## 网站管理接口
-### 获取网站列表
+### 获取所有网站
 - 接口 ： GET /api/sites
-- 描述 ：获取所有网站列表
+- 描述 ：获取所有网站列表，按创建时间倒序排列
 - 返回值 ：
 ```json
 [
@@ -316,12 +316,14 @@
         "logo": "string",
         "title": "string",
         "desc": "string",
-        "sort_order": "number"
+        "sort_order": "number",
+        "update_port_enabled": "boolean", // 是否允许自动更新端口号
+        "created_at": "string"
     }
 ]
- ```
+```
 
-### 获取单个网站详情
+### 获取网站详情
 - 接口 ： GET /api/sites/:id
 - 描述 ：获取单个网站详情
 - 参数 ：
@@ -336,14 +338,11 @@
     "logo": "string",
     "title": "string",
     "desc": "string",
-    "sort_order": "number"
+    "sort_order": "number",
+    "update_port_enabled": "boolean", // 是否允许自动更新端口号
+    "created_at": "string"
 }
- ```
-
-- 错误码 ：
-  - 400 ：无效的网站ID
-  - 404 ：未找到指定网站
-  - 500 ：服务器内部错误
+```
 
 ### 创建网站
 - 接口 ： POST /api/sites
@@ -352,13 +351,14 @@
 ```json
 {
     "category_id": "number", // 必填，分类ID
-    "url": "string",        // 必填，网站URL
-    "logo": "string",       // 可选，网站logo
-    "title": "string",      // 必填，网站标题
-    "desc": "string",       // 可选，网站描述
-    "sort_order": "number"  // 可选，排序顺序，默认为0
+    "url": "string",         // 必填，网站URL
+    "logo": "string",        // 可选，Logo图片URL
+    "title": "string",       // 必填，网站标题
+    "desc": "string",        // 可选，网站描述
+    "sort_order": "number",  // 可选，排序顺序，默认为0
+    "update_port_enabled": "boolean" // 可选，是否允许自动更新端口号，默认为true
 }
- ```
+```
 
 - 返回值 ：
 ```json
@@ -369,14 +369,11 @@
     "logo": "string",
     "title": "string",
     "desc": "string",
-    "sort_order": "number"
+    "sort_order": "number",
+    "update_port_enabled": "boolean",
+    "created_at": "string"
 }
- ```
-
-- 错误码 ：
-  - 400 ：请求参数错误或指定的分类不存在
-  - 403 ：需要管理员权限
-  - 500 ：服务器内部错误
+```
 
 ### 更新网站
 - 接口 ： POST /api/sites/update/:id
@@ -387,26 +384,21 @@
 ```json
 {
     "category_id": "number", // 必填，分类ID
-    "url": "string",        // 必填，网站URL
-    "logo": "string",       // 可选，网站logo
-    "title": "string",      // 必填，网站标题
-    "desc": "string",       // 可选，网站描述
-    "sort_order": "number"  // 可选，排序顺序
+    "url": "string",         // 必填，网站URL
+    "logo": "string",        // 可选，Logo图片URL
+    "title": "string",       // 必填，网站标题
+    "desc": "string",        // 可选，网站描述
+    "sort_order": "number",  // 可选，排序顺序，默认为0
+    "update_port_enabled": "boolean" // 可选，是否允许自动更新端口号，默认为true
 }
- ```
+```
 
 - 返回值 ：
 ```json
 {
-    "message": "网站更新成功"
+    "message": "string" // 网站更新成功
 }
- ```
-
-- 错误码 ：
-  - 400 ：请求参数错误或指定的分类不存在
-  - 403 ：需要管理员权限
-  - 404 ：未找到要更新的网站
-  - 500 ：服务器内部错误
+```
 
 ### 删除网站
 - 接口 ： POST /api/sites/delete/:id
@@ -416,14 +408,34 @@
 - 返回值 ：
 ```json
 {
-    "message": "网站删除成功"
+    "message": "string" // 网站删除成功
 }
- ```
+```
+
+### 批量更新网站端口
+- 接口 ： POST /api/sites/update-ports
+- 描述 ：批量更新所有 update_port_enabled 为 true 的网站 URL 和 Logo 中的端口号
+- 请求体 ：
+```json
+{
+    "port": "number" // 必填，新端口号
+}
+```
+
+- 返回值 ：
+```json
+{
+    "code": "number",         // 0表示成功，1表示部分或全部失败
+    "message": "string",      // 结果描述
+    "updated_categories": [   // 已更新的分类ID列表
+        "number"
+    ]
+}
+```
 
 - 错误码 ：
-  - 400 ：无效的网站ID
-  - 403 ：需要管理员权限
-  - 404 ：未找到要删除的网站
+  - 400 ：请求参数错误（端口号无效）
+  - 404 ：没有可更新端口的网站
   - 500 ：服务器内部错误
 
 ## 导航数据接口
@@ -475,3 +487,4 @@
   "category_ids": [1, 2, 3],  // 需要更新的分类ID数组
   "port": 8080                // 新的端口号(0-65535)
 }
+```

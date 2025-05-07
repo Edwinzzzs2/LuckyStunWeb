@@ -20,7 +20,7 @@ const Dashboard = () => {
         <GithubOutlined /> GitHub 地址: <Link href="#" target="_blank">查看</Link>
       </Paragraph>
       <Paragraph>
-        <MailOutlined /> E-mail 地址: hui-ho@outlook.com
+        <MailOutlined /> E-mail 地址: xxx@xxxx.com
       </Paragraph>
       <Paragraph>
         如果您有更好的想法，可以通过邮件与我联系，欢迎与我交流分享。

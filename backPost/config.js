@@ -5,7 +5,7 @@ module.exports = {
     database: {
         host: '192.168.31.80',
         user: 'root',
-        password: 'root123456',
+        password: 'Edwinzzzs2',
         database: 'webstack'
     }
 }; 

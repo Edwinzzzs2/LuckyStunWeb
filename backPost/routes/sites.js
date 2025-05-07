@@ -10,7 +10,7 @@ router.get('/', (req, res) => {
     SELECT s.*, c.name as category_name 
     FROM sites s
     LEFT JOIN categories c ON s.category_id = c.id
-    ORDER BY s.category_id ASC, s.sort_order ASC, s.id ASC;
+    ORDER BY s.created_at DESC, s.category_id ASC, s.sort_order ASC, s.id ASC;
   `;
   db.connection.query(query, (error, results) => {
     if (error) {
@@ -48,7 +48,15 @@ router.get('/:id', (req, res) => {
 
 // 创建新网站
 router.post('/', authenticateAdmin, (req, res) => {
-  const { category_id, url, logo, title, desc, sort_order = 0 } = req.body;
+  const { 
+    category_id, 
+    url, 
+    logo, 
+    title, 
+    desc, 
+    sort_order = 0, 
+    update_port_enabled = true 
+  } = req.body;
 
   // 验证必填字段
   if (!category_id || !url || !title) {
@@ -56,33 +64,55 @@ router.post('/', authenticateAdmin, (req, res) => {
   }
 
   const query = `
-    INSERT INTO sites (category_id, url, logo, title, \`desc\`, sort_order) 
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO sites (
+      category_id, 
+      url, 
+      logo, 
+      title, 
+      \`desc\`, 
+      sort_order, 
+      created_at, 
+      update_port_enabled
+    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
   `;
-  db.connection.query(query, [category_id, url, logo, title, desc, sort_order], (error, results) => {
-    if (error) {
-      console.error('创建网站失败:', error);
-      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-        return res.status(400).json({ message: '指定的分类不存在' });
+  db.connection.query(
+    query, 
+    [category_id, url, logo, title, desc, sort_order, update_port_enabled], 
+    (error, results) => {
+      if (error) {
+        console.error('创建网站失败:', error);
+        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+          return res.status(400).json({ message: '指定的分类不存在' });
+        }
+        return res.status(500).json({ message: '创建网站失败' });
       }
-      return res.status(500).json({ message: '创建网站失败' });
+      res.status(201).json({
+        id: results.insertId,
+        category_id,
+        url,
+        logo,
+        title,
+        desc,
+        sort_order,
+        update_port_enabled,
+        created_at: new Date().toISOString()
+      });
     }
-    res.status(201).json({
-      id: results.insertId,
-      category_id,
-      url,
-      logo,
-      title,
-      desc,
-      sort_order
-    });
-  });
+  );
 });
 
 // 更新网站
 router.post('/update/:id', authenticateAdmin, (req, res) => {
   const siteId = parseInt(req.params.id);
-  const { category_id, url, logo, title, desc, sort_order } = req.body;
+  const { 
+    category_id, 
+    url, 
+    logo, 
+    title, 
+    desc, 
+    sort_order, 
+    update_port_enabled = true 
+  } = req.body;
 
   if (isNaN(siteId)) {
     return res.status(400).json({ message: '无效的网站 ID' });
@@ -95,22 +125,33 @@ router.post('/update/:id', authenticateAdmin, (req, res) => {
 
   const query = `
     UPDATE sites 
-    SET category_id = ?, url = ?, logo = ?, title = ?, \`desc\` = ?, sort_order = ?
+    SET 
+      category_id = ?, 
+      url = ?, 
+      logo = ?, 
+      title = ?, 
+      \`desc\` = ?, 
+      sort_order = ?, 
+      update_port_enabled = ?
     WHERE id = ?
   `;
-  db.connection.query(query, [category_id, url, logo, title, desc, sort_order, siteId], (error, results) => {
-    if (error) {
-      console.error('更新网站失败:', error);
-      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-        return res.status(400).json({ message: '指定的分类不存在' });
+  db.connection.query(
+    query, 
+    [category_id, url, logo, title, desc, sort_order, update_port_enabled, siteId], 
+    (error, results) => {
+      if (error) {
+        console.error('更新网站失败:', error);
+        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+          return res.status(400).json({ message: '指定的分类不存在' });
+        }
+        return res.status(500).json({ message: '更新网站失败' });
       }
-      return res.status(500).json({ message: '更新网站失败' });
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: '未找到要更新的网站' });
+      }
+      res.json({ message: '网站更新成功' });
     }
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ message: '未找到要更新的网站' });
-    }
-    res.json({ message: '网站更新成功' });
-  });
+  );
 });
 
 // 删除网站
@@ -176,33 +217,34 @@ router.post('/batch-update-category', authenticateAdmin, (req, res) => {
 
 // 批量更新指定分类下网站的URL和Logo端口号
 router.post('/update-ports', (req, res) => {
-  const { category_ids, port } = req.body;
+  const { port } = req.body;
 
   // 1. 参数验证
-  if (!Array.isArray(category_ids) || category_ids.length === 0 || typeof port !== 'number' || !Number.isInteger(port) || port < 0 || port > 65535) {
-    return res.status(400).json({ code: 1, message: '无效的参数：category_ids 应为非空数组，port 应为有效的端口号 (0-65535)' });
+  if (typeof port !== 'number' || !Number.isInteger(port) || port < 0 || port > 65535) {
+    return res.status(400).json({ code: 1, message: '无效的端口号，应为 0-65535 之间的整数' });
   }
 
   // 2. 查询需要更新的网站
   const selectQuery = `
-    SELECT id, url, logo
+    SELECT id, url, logo, category_id
     FROM sites
-    WHERE category_id IN (?);
+    WHERE update_port_enabled = TRUE;
   `;
 
-  db.connection.query(selectQuery, [category_ids], (errorSelect, sitesToUpdate) => {
+  db.connection.query(selectQuery, (errorSelect, sitesToUpdate) => {
     if (errorSelect) {
       console.error('查询网站数据失败:', errorSelect);
       return res.status(500).json({ code: 1, message: '查询网站数据失败' });
     }
 
     if (sitesToUpdate.length === 0) {
-      return res.status(404).json({ code: 1, message: '未找到指定分类下的网站' });
+      return res.status(404).json({ code: 1, message: '没有可更新端口的网站' });
     }
 
     const updatePromises = [];
     let updatedCount = 0;
     const failedUpdates = [];
+    const categoriesUpdated = new Set();
 
     // 3. 遍历网站，准备更新操作
     sitesToUpdate.forEach(site => {
@@ -216,10 +258,12 @@ router.post('/update-ports', (req, res) => {
           const urlObject = new URL(site.url);
           if (urlObject.port) {
             const oldPort = urlObject.port;
-            urlObject.port = port.toString();
-            const newUrlString = urlObject.toString();
-            if (newUrlString !== site.url) {
-              updatedUrl = newUrlString;
+            const portPattern = `:${oldPort}`;
+            const newPort = `:${port}`;
+            
+            updatedUrl = site.url.replace(portPattern, newPort);
+            
+            if (updatedUrl !== site.url) {
               needsUpdate = true;
               console.log(`站点 ${site.id}: URL 端口 ${oldPort} -> ${port}`);
             }
@@ -237,10 +281,14 @@ router.post('/update-ports', (req, res) => {
             const logoUrlObject = new URL(site.logo);
             if (logoUrlObject.port) {
                 const oldPort = logoUrlObject.port;
-                logoUrlObject.port = port.toString();
-                const newLogoString = logoUrlObject.toString();
-                if (newLogoString !== site.logo) {
-                    updatedLogo = newLogoString;
+                // 直接操作字符串替换端口号
+                const portPattern = `:${oldPort}`;
+                const newPort = `:${port}`;
+                
+                // 使用字符串替换保持原 URL 其他特性不变
+                updatedLogo = site.logo.replace(portPattern, newPort);
+                
+                if (updatedLogo !== site.logo) {
                     needsUpdate = true;
                     console.log(`站点 ${site.id}: Logo 端口 ${oldPort} -> ${port}`);
                 }
@@ -264,6 +312,7 @@ router.post('/update-ports', (req, res) => {
               console.error(`更新网站 ID ${site.id} 失败:`, errorUpdate);
               reject({ id: site.id, error: errorUpdate });
             } else {
+              categoriesUpdated.add(site.category_id);
               resolve({ id: site.id, affectedRows: results.affectedRows });
             }
           });
@@ -273,7 +322,10 @@ router.post('/update-ports', (req, res) => {
     });
 
     if (updatePromises.length === 0) {
-      return res.json({ code: 0, message: '根据指定条件，没有需要更新端口的网站 (URL/Logo 中可能未包含明确的端口号)。' });
+      return res.json({ 
+        code: 0, 
+        message: '根据指定条件，没有需要更新端口的网站 (URL/Logo 中可能未包含明确的端口号)。' 
+      });
     }
 
     // 4. 执行所有更新操作
@@ -297,7 +349,11 @@ router.post('/update-ports', (req, res) => {
             failures: failedUpdates.map(f => ({ id: f.id, error: f.error.code || f.error.message }))
           });
         } else {
-          res.json({ code: 0, message: `成功为 ${updatedCount} 个网站的 URL/Logo 更新端口号为 ${port}` });
+          res.json({ 
+            code: 0, 
+            message: `成功为 ${updatedCount} 个网站的 URL/Logo 更新端口号为 ${port}`,
+            updated_categories: Array.from(categoriesUpdated)
+          });
         }
       });
   });

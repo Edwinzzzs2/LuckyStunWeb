@@ -165,11 +165,42 @@ const CategoryManagement = () => {
   return (
     <div>
       {contextHolder}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, }}>
-        <Title level={2} style={{ margin: 0 }}>分类管理</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-          添加分类
-        </Button>
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '16px', 
+          marginBottom: 16 
+        }}
+      >
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            width: '100%' 
+          }}
+        >
+          <Title level={2} style={{ margin: 0 }}>分类管理</Title>
+        </div>
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            alignItems: 'center', 
+            width: '100%' 
+          }}
+        >
+          <Space>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={() => showModal()}
+            >
+              新增分类
+            </Button>
+          </Space>
+        </div>
       </div>
 
       <Tree
@@ -202,31 +233,79 @@ const CategoryManagement = () => {
         onCancel={handleCancel}
         confirmLoading={loading}
         destroyOnClose
+        width={500}
+        bodyStyle={{ 
+          maxHeight: '50vh', 
+          overflowY: 'auto' 
+        }}
+        modalRender={(modal) => (
+          <div style={{ 
+            padding: '16px', 
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '70vh', 
+            maxHeight: '70vh'
+          }}>
+            <div style={{ 
+              flex: '1', 
+              overflowY: 'auto',
+              paddingRight: '8px' 
+            }}>
+              {modal}
+            </div>
+          </div>
+        )}
       >
-        <Form form={form} layout="vertical" name="category_form">
+        <Form 
+          form={form} 
+          layout="vertical" 
+          name="category_form"
+          requiredMark={false}
+          style={{ 
+            maxWidth: '100%', 
+            padding: '0 8px' 
+          }}
+        >
           <Form.Item
             name="name"
             label="分类名称"
             rules={[{ required: true, message: '请输入分类名称!' }]}
           >
-            <Input />
+            <Input placeholder="输入分类名称" />
           </Form.Item>
           <Form.Item name="en_name" label="英文名称">
-            <Input />
+            <Input placeholder="输入英文名称（可选）" />
           </Form.Item>
           <Form.Item name="icon" label="图标 (Font Awesome 类名)">
              <Input placeholder="例如：fas fa-star" />
           </Form.Item>
           <Form.Item name="parent_id" label="父级分类">
-            <Select allowClear placeholder="选择父级分类 (留空为顶级分类)">
+            <Select 
+              allowClear 
+              placeholder="选择父级分类 (留空为顶级分类)"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
               {flatCategories.map(cat => (
                  editingCategory && (cat.id === editingCategory.id || isDescendant(flatCategories, editingCategory.id, cat.id)) ? null :
                 <Option key={cat.id} value={cat.id}>{cat.name}</Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="sort_order" label="排序" initialValue={0}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+          <Form.Item 
+            name="sort_order" 
+            label="排序" 
+            initialValue={0}
+          >
+            <InputNumber 
+              min={0} 
+              style={{ width: '100%' }} 
+              placeholder="数字越小越靠前"
+            />
           </Form.Item>
         </Form>
       </Modal>
