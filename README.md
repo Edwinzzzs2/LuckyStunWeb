@@ -1,0 +1,2 @@
+# LuckyStunWeb
+个人导航页面，与lucky的stun穿透联动，支持通过webhook自动更新导航面板链接，支持配置个人导航页
