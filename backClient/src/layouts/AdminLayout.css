@@ -1,0 +1,75 @@
+/* src/layouts/AdminLayout.css */
+.trigger {
+  padding: 0 12px;
+  font-size: 18px;
+  line-height: 64px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.trigger:hover {
+  color: #1890ff;
+}
+
+.logo-container {
+  height: 64px; /* Match header height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* background: rgba(255, 255, 255, 0.2); */ /* Optional background */
+  margin-bottom: 10px;
+}
+
+.site-layout .site-layout-background {
+  background: #fff;
+}
+
+.user-info-sidebar {
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 8px;
+}
+
+/* Add more custom styles if needed */ 
+
+/* 响应式布局样式 */
+@media screen and (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed;
+    height: 100vh;
+    z-index: 999;
+    left: 0;
+    top: 0;
+  }
+
+  .ant-layout-sider-collapsed {
+    transform: translateX(-80px);
+  }
+
+  .ant-layout-sider:not(.ant-layout-sider-collapsed) {
+    transform: translateX(0);
+  }
+
+  .ant-layout-sider,
+  .ant-layout-sider-collapsed {
+    transition: transform 0.3s ease;
+  }
+
+  .user-info-sidebar {
+    display: none;
+  }
+
+  .logo-container h4 {
+    display: none;
+  }
+
+  .ant-layout-header {
+    padding: 0 8px !important;
+  }
+
+  .ant-layout-content {
+    margin: 16px 8px !important;
+    padding: 16px !important;
+  }
+}
