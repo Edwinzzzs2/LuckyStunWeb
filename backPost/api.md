@@ -438,6 +438,49 @@
   - 404 ：没有可更新端口的网站
   - 500 ：服务器内部错误
 
+### 获取站点URL信息（重定向用）
+- 接口 ： GET /api/redirect
+- 描述 ：获取指定站点ID的URL信息，用于页面跳转
+- 参数 ：
+  - id ：站点ID（查询参数）
+- 返回值 ：
+```json
+{
+    "success": true,
+    "data": {
+        "id": "number",
+        "url": "string",      // 站点URL
+        "logo": "string",     // 站点Logo图片URL
+        "title": "string",    // 站点标题
+        "desc": "string"      // 站点描述
+    }
+}
+```
+
+- 错误情况 ：
+  - 无效ID：返回 400 状态码
+    ```json
+    {
+        "success": false,
+        "message": "无效的站点ID"
+    }
+    ```
+  - 站点不存在：返回 200 状态码
+    ```json
+    {
+        "success": false,
+        "not_found": true,
+        "message": "未找到ID为xxx的站点"
+    }
+    ```
+  - 服务器错误：返回 500 状态码
+    ```json
+    {
+        "success": false,
+        "message": "获取站点URL信息失败"
+    }
+    ```
+
 ## 导航数据接口
 ### 获取导航数据
 - 接口 ： GET /api/navigation
@@ -474,17 +517,3 @@
 2. 错误响应通常包含 message 字段说明错误原因
 3. 部分接口的请求和响应可能包含额外的字段，这里只列出了主要字段
 4. 需要管理员权限的接口需要在请求头中包含有效的JWT token
-
-### 批量更新网站端口号
-
-**请求方法**: POST  
-**请求路径**: `/api/navigation/update-ports`  
-**权限要求**: 管理员权限  
-
-**请求参数**:
-```json
-{
-  "category_ids": [1, 2, 3],  // 需要更新的分类ID数组
-  "port": 8080                // 新的端口号(0-65535)
-}
-```

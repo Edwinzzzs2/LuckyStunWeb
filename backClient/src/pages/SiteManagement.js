@@ -16,9 +16,7 @@ import {
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, SwapOutlined } from '@ant-design/icons';
 import { getSites, getCategoriesFlat, createSite, updateSite, deleteSite, batchUpdateSiteCategory } from '../services/api';
-
 const { Title } = Typography;
-const { Option } = Select;
 
 const SiteManagement = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -29,6 +27,9 @@ const SiteManagement = () => {
   const [editingSite, setEditingSite] = useState(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [form] = Form.useForm();
+  const [batchForm] = Form.useForm();
+  const [isBatchModalVisible, setIsBatchModalVisible] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState(null);
 
   // 获取网站和分类数据的函数
   const fetchData = async () => {
@@ -92,6 +93,38 @@ const SiteManagement = () => {
     }
   };
 
+  // 批量操作弹窗
+  const showBatchModal = () => {
+    batchForm.resetFields();
+    setIsBatchModalVisible(true);
+  };
+
+  const handleBatchCancel = () => {
+    setIsBatchModalVisible(false);
+    batchForm.resetFields();
+  };
+
+  const handleBatchOk = async () => {
+    try {
+      const values = await batchForm.validateFields();
+      setLoading(true);
+      const response = await batchUpdateSiteCategory({
+        site_ids: selectedRowKeys,
+        category_id: values.category_id,
+        update_port_enabled: values.update_port_enabled,
+        port: values.port
+      });
+      messageApi.success(response.data.message);
+      setSelectedRowKeys([]);
+      setIsBatchModalVisible(false);
+      fetchData();
+    } catch (error) {
+      messageApi.error(`批量更新失败: ${error.response?.data?.message || '请稍后重试'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 处理删除
   const handleDelete = async (id) => {
     try {
@@ -114,7 +147,7 @@ const SiteManagement = () => {
       width: 80, 
       render: (text, record, index) => index + 1 
     },
-    // { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
     {
       title: 'Logo',
       dataIndex: 'logo',
@@ -129,17 +162,36 @@ const SiteManagement = () => {
         />
       ),
     },
-    { title: '标题', dataIndex: 'title', key: 'title' },
-    { title: 'URL', dataIndex: 'url', key: 'url', render: (url) => <a href={url} target="_blank" rel="noopener noreferrer">{url}</a> },
-    { title: '描述', dataIndex: 'desc', key: 'desc', ellipsis: true }, // ellipsis 属性可以自动省略过长文本
+    { title: '标题', dataIndex: 'title', key: 'title',width: 220, },
+    { title: 'URL', dataIndex: 'url',width: 280, key: 'url', render: (url) => <a href={url} target="_blank" rel="noopener noreferrer">{url}</a> },
+    { title: '描述', dataIndex: 'desc', key: 'desc', ellipsis: true,width: 280, }, // ellipsis 属性可以自动省略过长文本
     {
       title: '分类',
       dataIndex: 'category_id', // API 返回的是 category_id
       key: 'category_id',
+      width: 120,
       // 从 categories 状态中查找对应的名称
       render: (categoryId) => categories.find(cat => cat.id === categoryId)?.name || '未分类',
+      filters: categories.map(cat => ({ text: cat.name, value: cat.id })),
+      onFilter: (value, record) => record.category_id === value,
+      filteredValue: categoryFilter ? [categoryFilter] : null,
     },
     { title: '排序', dataIndex: 'sort_order', key: 'sort_order', width: 80 },
+    {
+      title: '自动更新端口',
+      dataIndex: 'update_port_enabled',
+      key: 'update_port_enabled',
+      width: 120,
+      render: (enabled) => (
+        <Switch
+          checked={enabled}
+          disabled
+          checkedChildren="开启"
+          unCheckedChildren="关闭"
+          size="small"
+        />
+      ),
+    },
     {
       title: '操作',
       key: 'action',
@@ -194,37 +246,31 @@ const SiteManagement = () => {
         <div 
           style={{ 
             display: 'flex', 
-            justifyContent: 'flex-end', 
+            justifyContent: 'space-between', 
             alignItems: 'center', 
             width: '100%' 
           }}
         >
+          <Select
+            placeholder="按分类筛选"
+            style={{ width: 150 }}
+            allowClear
+            onChange={(value) => setCategoryFilter(value)}
+            value={categoryFilter}
+          >
+            {categories.map(cat => (
+              <Select.Option key={cat.id} value={cat.id}>{cat.name}</Select.Option>
+            ))}
+          </Select>
           <Space>
             {selectedRowKeys.length > 0 && (
-              <Select
-                placeholder="选择目标分类"
-                style={{ width: 200 }}
-                onChange={async (categoryId) => {
-                  try {
-                    setLoading(true);
-                    const response = await batchUpdateSiteCategory({
-                      site_ids: selectedRowKeys,
-                      category_id: categoryId
-                    });
-                    messageApi.success(`成功更新 ${response.data.affected_rows} 个站点的分类`);
-                    setSelectedRowKeys([]);
-                    fetchData();
-                  } catch (error) {
-                    messageApi.error(`批量更新失败: ${error.response?.data?.message || '请稍后重试'}`);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
+              <Button 
+                type="primary" 
+                icon={<SwapOutlined />} 
+                onClick={showBatchModal}
               >
-                {categories.map(cat => (
-                  <Select.Option key={cat.id} value={cat.id}>{cat.name}</Select.Option>
-                ))}
-              </Select>
+                批量操作
+              </Button>
             )}
             <Button 
               type="primary" 
@@ -264,6 +310,13 @@ const SiteManagement = () => {
         // 添加响应式配置
         responsive={true}
         tableLayout="fixed" // 固定布局
+        onChange={(pagination, filters) => {
+          if (filters.category_id && filters.category_id.length > 0) {
+            setCategoryFilter(filters.category_id[0]);
+          } else {
+            setCategoryFilter(null);
+          }
+        }}
       />
 
       {/* 新增/编辑网站的 Modal */}
@@ -281,23 +334,24 @@ const SiteManagement = () => {
           // paddingBottom: '60px' // 为底部按钮预留空间
         }}
         modalRender={(modal) => (
-          <div style={{ 
-            padding: '16px', 
-            borderRadius: '8px', 
-            // boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '70vh', // 固定总高度
-            maxHeight: '70vh'
-          }}>
-            <div style={{ 
-              flex: '1', 
-              overflowY: 'auto',
-              paddingRight: '8px' 
+            <div style={{
+              padding: '16px',
+              borderRadius: '8px',
+              // boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '70vh', // 固定总高度
+              maxHeight: '70vh'
             }}>
-              {modal}
+              <div style={{
+                flex: '1',
+                overflowY: 'auto',
+                paddingRight: '8px'
+              }}>
+                {modal}
+              </div>
             </div>
-          </div>
+
         )}
         footer={[
           <Button key="cancel" onClick={handleCancel}>
@@ -398,6 +452,65 @@ const SiteManagement = () => {
                 unCheckedChildren="关闭" 
               />
             </Form.Item>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* 批量操作 Modal */}
+      <Modal
+        title="批量操作"
+        open={isBatchModalVisible}
+        onOk={handleBatchOk}
+        onCancel={handleBatchCancel}
+        confirmLoading={loading}
+        destroyOnClose
+      >
+        <Form
+          form={batchForm}
+          layout="vertical"
+          name="batch_form"
+          requiredMark={false}
+        >
+          <Form.Item
+            name="category_id"
+            label="目标分类"
+            rules={[{ required: true, message: '请选择目标分类!' }]}
+          >
+            <Select placeholder="选择分类">
+              {categories.map(cat => (
+                <Select.Option key={cat.id} value={cat.id}>{cat.name}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="update_port_enabled"
+            label="自动更新端口"
+            valuePropName="checked"
+            initialValue={true}
+          >
+            <Switch
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+              defaultChecked
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="port"
+            label="设置端口"
+            tooltip="可选项，批量更新URL中的端口"
+          >
+            <InputNumber
+              placeholder="例如: 8080"
+              style={{ width: '100%' }}
+              min={1}
+              max={65535}
+            />
+          </Form.Item>
+          
+          <div style={{ marginTop: '16px', color: '#999' }}>
+            已选择 {selectedRowKeys.length} 个站点
           </div>
         </Form>
       </Modal>

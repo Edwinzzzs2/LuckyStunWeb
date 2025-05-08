@@ -177,7 +177,7 @@ router.post('/delete/:id', authenticateAdmin, (req, res) => {
 
 // 批量更新站点分类
 router.post('/batch-update-category', authenticateAdmin, (req, res) => {
-  const { site_ids, category_id } = req.body;
+  const { site_ids, category_id, port, update_port_enabled } = req.body;
 
   if (!Array.isArray(site_ids) || site_ids.length === 0 || !category_id) {
     return res.status(400).json({ message: '站点ID列表和目标分类ID为必填项' });
@@ -195,9 +195,19 @@ router.post('/batch-update-category', authenticateAdmin, (req, res) => {
       return res.status(400).json({ message: '目标分类不存在' });
     }
 
-    // 批量更新站点分类
-    const updateQuery = 'UPDATE sites SET category_id = ? WHERE id IN (?)';
-    db.connection.query(updateQuery, [category_id, site_ids], (error, results) => {
+    // 构建更新查询
+    let updateFields = ['category_id = ?'];
+    let updateValues = [category_id];
+
+    // 如果提供了update_port_enabled参数，添加到更新字段
+    if (update_port_enabled !== undefined) {
+      updateFields.push('update_port_enabled = ?');
+      updateValues.push(update_port_enabled);
+    }
+
+    // 构建并执行更新查询
+    const updateQuery = `UPDATE sites SET ${updateFields.join(', ')} WHERE id IN (?)`;
+    db.connection.query(updateQuery, [...updateValues, site_ids], (error, results) => {
       if (error) {
         console.error('批量更新站点分类失败:', error);
         return res.status(500).json({ message: '批量更新站点分类失败' });
@@ -207,10 +217,128 @@ router.post('/batch-update-category', authenticateAdmin, (req, res) => {
         return res.status(404).json({ message: '未找到要更新的站点' });
       }
 
-      res.json({ 
-        message: '站点分类批量更新成功',
-        affected_rows: results.affectedRows
-      });
+      // 如果提供了端口号，则更新端口
+      if (port !== undefined) {
+        // 验证端口号
+        if (typeof port !== 'number' || !Number.isInteger(port) || port < 0 || port > 65535) {
+          return res.status(400).json({ message: '无效的端口号，应为 0-65535 之间的整数' });
+        }
+
+        // 查询需要更新的网站
+        const selectQuery = 'SELECT id, url, logo FROM sites WHERE id IN (?)';
+        db.connection.query(selectQuery, [site_ids], (errorSelect, sitesToUpdate) => {
+          if (errorSelect) {
+            console.error('查询网站数据失败:', errorSelect);
+            return res.status(500).json({ 
+              message: '分类更新成功，但查询网站数据失败，无法更新端口',
+              affected_rows: results.affectedRows
+            });
+          }
+
+          const updatePromises = [];
+          let updatedCount = 0;
+          const failedUpdates = [];
+
+          // 遍历网站，准备更新操作
+          sitesToUpdate.forEach(site => {
+            let updatedUrl = site.url;
+            let updatedLogo = site.logo;
+            let needsUpdate = false;
+
+            // 尝试更新 URL 端口
+            if (site.url) {
+              try {
+                const urlObject = new URL(site.url);
+                if (urlObject.port) {
+                  const oldPort = urlObject.port;
+                  const portPattern = `:${oldPort}`;
+                  const newPort = `:${port}`;
+                  
+                  updatedUrl = site.url.replace(portPattern, newPort);
+                  
+                  if (updatedUrl !== site.url) {
+                    needsUpdate = true;
+                  }
+                }
+              } catch (e) {
+                console.warn(`站点 ${site.id}: 解析或更新 URL "${site.url}" 失败: ${e.message}`);
+              }
+            }
+
+            // 尝试更新 Logo URL 端口
+            if (site.logo && site.logo.startsWith('http')) {
+              try {
+                const logoUrlObject = new URL(site.logo);
+                if (logoUrlObject.port) {
+                  const oldPort = logoUrlObject.port;
+                  const portPattern = `:${oldPort}`;
+                  const newPort = `:${port}`;
+                  
+                  updatedLogo = site.logo.replace(portPattern, newPort);
+                  
+                  if (updatedLogo !== site.logo) {
+                    needsUpdate = true;
+                  }
+                }
+              } catch (e) {
+                console.warn(`站点 ${site.id}: 解析或更新 Logo URL "${site.logo}" 失败: ${e.message}`);
+              }
+            }
+
+            if (needsUpdate) {
+              const updatePortQuery = 'UPDATE sites SET url = ?, logo = ? WHERE id = ?';
+              const promise = new Promise((resolve, reject) => {
+                db.connection.query(updatePortQuery, [updatedUrl, updatedLogo, site.id], (errorUpdate, results) => {
+                  if (errorUpdate) {
+                    reject({ id: site.id, error: errorUpdate });
+                  } else {
+                    resolve({ id: site.id, affectedRows: results.affectedRows });
+                  }
+                });
+              });
+              updatePromises.push(promise);
+            }
+          });
+
+          if (updatePromises.length === 0) {
+            return res.json({ 
+              message: '站点分类批量更新成功，没有需要更新端口的网站',
+              affected_rows: results.affectedRows
+            });
+          }
+
+          // 执行所有更新操作
+          Promise.allSettled(updatePromises)
+            .then(portResults => {
+              portResults.forEach(result => {
+                if (result.status === 'fulfilled' && result.value.affectedRows > 0) {
+                  updatedCount++;
+                } else if (result.status === 'rejected') {
+                  failedUpdates.push(result.reason);
+                }
+              });
+
+              // 返回结果
+              if (failedUpdates.length > 0) {
+                res.json({
+                  message: `站点分类批量更新成功，尝试更新 ${updatePromises.length} 个网站端口，成功 ${updatedCount} 个，失败 ${failedUpdates.length} 个。`,
+                  affected_rows: results.affectedRows,
+                  failures: failedUpdates.map(f => ({ id: f.id, error: f.error.code || f.error.message }))
+                });
+              } else {
+                res.json({ 
+                  message: `站点分类批量更新成功，成功为 ${updatedCount} 个网站的 URL/Logo 更新端口号为 ${port}`,
+                  affected_rows: results.affectedRows
+                });
+              }
+            });
+        });
+      } else {
+        res.json({ 
+          message: '站点分类批量更新成功',
+          affected_rows: results.affectedRows
+        });
+      }
     });
   });
 });
