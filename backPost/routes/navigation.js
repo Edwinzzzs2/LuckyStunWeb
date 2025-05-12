@@ -6,7 +6,7 @@ const { URL } = require('url'); // 引入 URL 模块
 // 获取前端导航页的汇总数据
 router.get('/', (req, res) => {
   const categoriesQuery = `
-    SELECT id, name, en_name, icon, parent_id
+    SELECT id, name, en_name, icon, parent_id, sort_order
     FROM categories
     ORDER BY parent_id ASC, sort_order ASC, id ASC;
   `;
@@ -62,6 +62,7 @@ router.get('/', (req, res) => {
           en_name: category.en_name,
           icon: category.icon,
           parent_id: category.parent_id,
+          sort_order: category.sort_order,
           web: sitesByCategory[category.id] || [],
           children: []
         };
@@ -88,11 +89,20 @@ router.get('/', (req, res) => {
           name: topLevelCategory.name,
           en_name: topLevelCategory.en_name,
           icon: topLevelCategory.icon,
+          sort_order: topLevelCategory.sort_order,
         };
         if (topLevelCategory.children.length > 0) {
+          // 对子分类按sort_order排序
+          topLevelCategory.children.sort((a, b) => {
+            const aCategory = categoryMap[a.id];
+            const bCategory = categoryMap[b.id];
+            return (aCategory?.sort_order || 0) - (bCategory?.sort_order || 0);
+          });
+          
           finalCategory.children = topLevelCategory.children.map(child => ({
             name: child.name,
             en_name: child.en_name,
+            sort_order: categoryMap[child.id]?.sort_order,
             web: child.web
           }));
         } else {
@@ -100,6 +110,23 @@ router.get('/', (req, res) => {
         }
         navigationData.push(finalCategory);
       });
+
+      // 添加调试日志
+      console.log("排序前:", navigationData.map(item => ({ name: item.name, sort: item.sort_order })));
+      
+      // 对最终结果按sort_order排序
+      navigationData.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      
+      // 再次添加日志
+      console.log("排序后:", navigationData.map(item => ({ name: item.name, sort: item.sort_order })));
+      
+      // 移除sort_order字段（如果不想返回给前端）
+      // navigationData.forEach(item => {
+      //   delete item.sort_order;
+      //   if (item.children) {
+      //     item.children.forEach(child => delete child.sort_order);
+      //   }
+      // });
 
       res.json(navigationData);
     });

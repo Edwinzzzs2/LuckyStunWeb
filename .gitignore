@@ -1,1 +1,6 @@
-/backPost/config.js
+# 依赖目录
+node_modules/
+
+# 配置文件
+**/config.js
+
