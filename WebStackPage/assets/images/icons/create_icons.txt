@@ -1,0 +1,44 @@
+# PWA 图标生成指南
+
+为了让PWA应用正常工作，您需要创建以下尺寸的图标：
+
+1. icon-72x72.png (72x72 像素)
+2. icon-96x96.png (96x96 像素)
+3. icon-128x128.png (128x128 像素)
+4. icon-144x144.png (144x144 像素)
+5. icon-152x152.png (152x152 像素)
+6. icon-192x192.png (192x192 像素)
+7. icon-384x384.png (384x384 像素)
+8. icon-512x512.png (512x512 像素)
+
+## 图标生成方法
+
+### 选项1：使用现有图标
+您可以使用现有的网站图标（favicon.png）作为基础，通过图像编辑工具调整大小生成所需的各种尺寸。
+
+### 选项2：使用在线工具
+您可以使用以下在线工具自动生成所有所需的图标：
+- PWA Image Generator: https://www.pwabuilder.com/imageGenerator
+- App Icon Generator: https://appiconmaker.co/
+- Real Favicon Generator: https://realfavicongenerator.net/
+
+### 选项3：使用命令行工具
+如果您有Node.js环境，可以使用pwa-asset-generator工具：
+
+```bash
+# 安装工具
+npm install -g pwa-asset-generator
+
+# 生成图标
+pwa-asset-generator ./assets/images/favicon.png ./assets/images/icons
+```
+
+## 图标放置
+生成的图标应放置在 `/assets/images/icons/` 目录下，并确保manifest.json中的图标路径正确指向这些文件。
+
+## 图标设计建议
+- 使用简单、清晰的设计
+- 确保在小尺寸下仍然可识别
+- 使用与网站主题一致的颜色
+- 图标应该有足够的边距，避免被裁剪
+- 确保图标在深色和浅色背景下都可见 

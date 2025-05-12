@@ -5,6 +5,12 @@
     <link rel="shortcut icon" href="./assets/images/favicon.png">
     <meta charset="UTF-8">
     <title>Web网址导航</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Web导航">
+    <link rel="apple-touch-icon" href="./assets/images/icons/icon-152x152.png">
     <script>
     if (navigator.appName == "Netscape") {
         var language = navigator.language;
@@ -27,6 +33,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="viggo" />
     <title>Web网址导航</title>
-    
+    <script>
+        // 检查浏览器是否支持Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker 注册成功: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('ServiceWorker 注册失败: ', error);
+                    });
+            });
+        }
+    </script>
 </head>
 </html>
