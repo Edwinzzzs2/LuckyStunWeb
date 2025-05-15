@@ -163,7 +163,24 @@ const SiteManagement = () => {
       ),
     },
     { title: '标题', dataIndex: 'title', key: 'title',width: 220, },
-    { title: 'URL', dataIndex: 'url',width: 280, key: 'url', render: (url) => <a href={url} target="_blank" rel="noopener noreferrer">{url}</a> },
+    {
+      title: '主网站 URL',
+      dataIndex: 'url',
+      key: 'url',
+      render: text => <a href={text} target="_blank" rel="noopener noreferrer">{text}</a>,
+    },
+    {
+      title: '备用 URL',
+      dataIndex: 'backup_url',
+      key: 'backup_url',
+      render: text => text ? <a href={text} target="_blank" rel="noopener noreferrer">{text}</a> : '-',
+    },
+    {
+      title: '内网地址',
+      dataIndex: 'internal_url',
+      key: 'internal_url',
+      render: text => text ? <a href={text} target="_blank" rel="noopener noreferrer">{text}</a> : '-',
+    },
     { title: '描述', dataIndex: 'desc', key: 'desc', ellipsis: true,width: 280, }, // ellipsis 属性可以自动省略过长文本
     {
       title: '分类',
@@ -386,14 +403,35 @@ const SiteManagement = () => {
           </Form.Item>
           <Form.Item
             name="url"
-            label="网站 URL"
+            label="主网站 URL"
             rules={[
-              { required: true, message: '请输入网站 URL!' }, 
+              { required: true, message: '请输入主网站 URL!' }, 
               { type: 'url', message: '请输入有效的 URL!' }
             ]}
           >
             <Input placeholder="https://www.example.com" />
           </Form.Item>
+          
+          <Form.Item
+            name="backup_url"
+            label="备用 URL"
+            rules={[
+              { type: 'url', message: '请输入有效的 URL!' }
+            ]}
+          >
+            <Input placeholder="https://backup.example.com" />
+          </Form.Item>
+          
+          <Form.Item
+            name="internal_url"
+            label="内网地址"
+            rules={[
+              { type: 'url', message: '请输入有效的 URL!' }
+            ]}
+          >
+            <Input placeholder="http://192.168.1.100" />
+          </Form.Item>
+          
           <Form.Item
             name="category_id"
             label="所属分类"

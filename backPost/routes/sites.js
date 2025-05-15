@@ -6,12 +6,7 @@ const { URL } = require('url'); // 引入 URL 模块
 
 // 获取所有网站列表
 router.get('/', (req, res) => {
-  const query = `
-    SELECT s.*, c.name as category_name 
-    FROM sites s
-    LEFT JOIN categories c ON s.category_id = c.id
-    ORDER BY s.created_at DESC, s.category_id ASC, s.sort_order ASC, s.id ASC;
-  `;
+  const query = `SELECT id, category_id, url, backup_url, internal_url, logo, title, \`desc\`, sort_order, update_port_enabled FROM sites`;
   db.connection.query(query, (error, results) => {
     if (error) {
       console.error('获取网站列表失败:', error);
@@ -51,6 +46,8 @@ router.post('/', authenticateAdmin, (req, res) => {
   const { 
     category_id, 
     url, 
+    backup_url,    // 新增备用URL
+    internal_url,  // 新增内网URL
     logo, 
     title, 
     desc, 
@@ -67,17 +64,19 @@ router.post('/', authenticateAdmin, (req, res) => {
     INSERT INTO sites (
       category_id, 
       url, 
+      backup_url,
+      internal_url,
       logo, 
       title, 
       \`desc\`, 
       sort_order, 
       created_at, 
       update_port_enabled
-    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
   `;
   db.connection.query(
     query, 
-    [category_id, url, logo, title, desc, sort_order, update_port_enabled], 
+    [category_id, url, backup_url, internal_url, logo, title, desc, sort_order, update_port_enabled], 
     (error, results) => {
       if (error) {
         console.error('创建网站失败:', error);
@@ -90,6 +89,8 @@ router.post('/', authenticateAdmin, (req, res) => {
         id: results.insertId,
         category_id,
         url,
+        backup_url,
+        internal_url,
         logo,
         title,
         desc,
@@ -104,9 +105,15 @@ router.post('/', authenticateAdmin, (req, res) => {
 // 更新网站
 router.post('/update/:id', authenticateAdmin, (req, res) => {
   const siteId = parseInt(req.params.id);
+  
+  // 添加这行调试代码
+  console.log('更新网站请求体:', req.body);
+  
   const { 
     category_id, 
     url, 
+    backup_url,
+    internal_url,
     logo, 
     title, 
     desc, 
@@ -128,6 +135,8 @@ router.post('/update/:id', authenticateAdmin, (req, res) => {
     SET 
       category_id = ?, 
       url = ?, 
+      backup_url = ?,
+      internal_url = ?,
       logo = ?, 
       title = ?, 
       \`desc\` = ?, 
@@ -137,7 +146,7 @@ router.post('/update/:id', authenticateAdmin, (req, res) => {
   `;
   db.connection.query(
     query, 
-    [category_id, url, logo, title, desc, sort_order, update_port_enabled, siteId], 
+    [category_id, url, backup_url, internal_url, logo, title, desc, sort_order, update_port_enabled, siteId], 
     (error, results) => {
       if (error) {
         console.error('更新网站失败:', error);

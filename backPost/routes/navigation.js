@@ -5,13 +5,16 @@ const { URL } = require('url'); // 引入 URL 模块
 
 // 获取前端导航页的汇总数据
 router.get('/', (req, res) => {
+  // 获取URL类型参数，默认为'main'
+  const urlType = req.query.url_type || 'main'; // 可能的值: main, backup, internal
+  
   const categoriesQuery = `
     SELECT id, name, en_name, icon, parent_id, sort_order
     FROM categories
     ORDER BY parent_id ASC, sort_order ASC, id ASC;
   `;
   const sitesQuery = `
-    SELECT id, category_id, url, logo, title, \`desc\`, sort_order
+    SELECT id, category_id, url, backup_url, internal_url, logo, title, \`desc\`, sort_order
     FROM sites
     ORDER BY category_id ASC, sort_order ASC, id ASC;
   `;
@@ -34,8 +37,17 @@ router.get('/', (req, res) => {
         if (!sitesByCategory[site.category_id]) {
           sitesByCategory[site.category_id] = [];
         }
+        
+        // 根据url_type参数选择返回的URL
+        let displayUrl = site.url; // 默认使用主URL
+        if (urlType === 'backup' && site.backup_url) {
+          displayUrl = site.backup_url;
+        } else if (urlType === 'internal' && site.internal_url) {
+          displayUrl = site.internal_url;
+        }
+        
         sitesByCategory[site.category_id].push({
-          url: site.url,
+          url: displayUrl, // 只返回指定类型的URL
           logo: site.logo,
           title: site.title,
           desc: site.desc
@@ -45,8 +57,8 @@ router.get('/', (req, res) => {
       // 对每个分类下的站点按照 sort_order 排序
       Object.keys(sitesByCategory).forEach(categoryId => {
         sitesByCategory[categoryId].sort((a, b) => {
-          const siteA = sites.find(s => s.url === a.url);
-          const siteB = sites.find(s => s.url === b.url);
+          const siteA = sites.find(s => s.url === a.url || s.backup_url === a.url || s.internal_url === a.url);
+          const siteB = sites.find(s => s.url === b.url || s.backup_url === b.url || s.internal_url === b.url);
           return (siteA?.sort_order || 0) - (siteB?.sort_order || 0);
         });
       });

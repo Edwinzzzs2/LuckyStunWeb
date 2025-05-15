@@ -20,6 +20,7 @@ connection.connect(async (err) => {
   console.log('数据库连接成功');
   
   try {
+    // ALTER TABLE sites ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     // 检查是否已有管理员账户
     connection.query('SELECT COUNT(*) as count FROM users WHERE is_admin = TRUE', async (error, results) => {
       if (error) {
