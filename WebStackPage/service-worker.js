@@ -6,7 +6,6 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/cn/index.html',
-  '/en/index.html',
   '/manifest.json',
   '/assets/css/fonts/linecons/css/linecons.css',
   '/assets/css/fonts/fontawesome/css/font-awesome.min.css',
@@ -27,9 +26,15 @@ const urlsToCache = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
+      .then(async cache => {
         console.log('缓存已打开');
-        return cache.addAll(urlsToCache);
+        for (const url of urlsToCache) {
+          try {
+            await cache.add(url);
+          } catch (e) {
+            console.warn('缓存失败:', url, e);
+          }
+        }
       })
       .then(() => self.skipWaiting())
   );
@@ -53,6 +58,10 @@ self.addEventListener('activate', event => {
 
 // 处理请求
 self.addEventListener('fetch', event => {
+  // 只处理 http/https 请求，忽略 chrome-extension 等其他协议
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
   // 网络优先策略
   event.respondWith(
     fetch(event.request)
