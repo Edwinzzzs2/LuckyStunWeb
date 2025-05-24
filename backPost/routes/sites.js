@@ -89,7 +89,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 });
 
 // 更新网站信息
-router.post('/:id', authenticateAdmin, async (req, res) => {
+router.post('/:id(\\d+)', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { category_id, url, backup_url, internal_url, logo, title, desc, sort_order, update_port_enabled } = req.body;
@@ -189,7 +189,7 @@ router.post('/update/:id', authenticateAdmin, async (req, res) => {
 });
 
 // 删除网站
-router.delete('/:id', authenticateAdmin, async (req, res) => {
+router.post('/delete/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await db.query('DELETE FROM sites WHERE id = ?', [id]);
@@ -249,10 +249,18 @@ router.post('/batch-update-category', authenticateAdmin, async (req, res) => {
       // 更新每个网站的URL
       for (const site of sitesToUpdate) {
         try {
-          const url = new URL(site.url);
-          url.port = port;
-          const updateUrlQuery = 'UPDATE sites SET url = ? WHERE id = ?';
-          await db.query(updateUrlQuery, [url.toString(), site.id]);
+          // 用正则替换端口，不用 new URL
+          let updated = site.url;
+          const portPattern = /^(https?:\/\/[^/:]+)(:\d+)?(\/?.*)$/i;
+          const match = updated.match(portPattern);
+          if (match) {
+            const currentPort = match[2] ? parseInt(match[2].slice(1)) : (match[1].startsWith('https') ? 443 : 80);
+            if (currentPort !== port) {
+              updated = match[1] + (port ? `:${port}` : '') + (match[3] || '');
+              const updateUrlQuery = 'UPDATE sites SET url = ? WHERE id = ?';
+              await db.query(updateUrlQuery, [updated, site.id]);
+            }
+          }
         } catch (error) {
           console.error(`更新网站 ${site.id} 的URL失败:`, error);
         }
@@ -267,147 +275,103 @@ router.post('/batch-update-category', authenticateAdmin, async (req, res) => {
 });
 
 // 批量更新指定分类下网站的URL和Logo端口号
-router.post('/update-ports', (req, res) => {
-  const { port } = req.body;
+router.post('/update-ports', async (req, res) => {
+  console.log('update-ports')
+  try {
+    const port = Number(req.body.port);
 
-  // 1. 参数验证
-  if (typeof port !== 'number' || !Number.isInteger(port) || port < 0 || port > 65535) {
-    return res.status(400).json({ code: 1, message: '无效的端口号，应为 0-65535 之间的整数' });
-  }
-
-  // 2. 查询需要更新的网站
-  const selectQuery = `
-    SELECT id, url, logo, category_id
-    FROM sites
-    WHERE update_port_enabled = TRUE;
-  `;
-
-  db.connection.query(selectQuery, (errorSelect, sitesToUpdate) => {
-    if (errorSelect) {
-      console.error('查询网站数据失败:', errorSelect);
-      return res.status(500).json({ code: 1, message: '查询网站数据失败' });
+    // 1. 参数验证
+    if (!Number.isInteger(port) || port < 0 || port > 65535) {
+      return res.status(400).json({ code: 1, message: '无效的端口号，应为 0-65535 之间的整数' });
     }
+
+    // 2. 查询需要更新的网站
+    const selectQuery = `
+      SELECT id, url, logo, category_id
+      FROM sites
+      WHERE update_port_enabled = TRUE;
+    `;
+    const sitesToUpdate = await db.query(selectQuery);
 
     if (sitesToUpdate.length === 0) {
       return res.status(404).json({ code: 1, message: '没有可更新端口的网站' });
     }
 
-    const updatePromises = [];
     let updatedCount = 0;
     const failedUpdates = [];
     const categoriesUpdated = new Set();
 
-    // 3. 遍历网站，准备更新操作
-    sitesToUpdate.forEach(site => {
+    for (const site of sitesToUpdate) {
       let updatedUrl = site.url;
       let updatedLogo = site.logo;
       let needsUpdate = false;
 
-      // 尝试更新 URL 端口
+      // 尝试更新 URL 端口（用正则，不用 new URL）
       if (site.url) {
         try {
-          const urlObject = new URL(site.url);
-          if (urlObject.port) {
-            const oldPort = urlObject.port;
-            const portPattern = `:${oldPort}`;
-            const newPort = `:${port}`;
-            
-            updatedUrl = site.url.replace(portPattern, newPort);
-            
-            if (updatedUrl !== site.url) {
+          // 匹配协议://host:port/path 或协议://host/path
+          let updated = site.url;
+          const portPattern = /^(https?:\/\/[^/:]+)(:\d+)?(\/?.*)$/i;
+          const match = updated.match(portPattern);
+          if (match) {
+            const currentPort = match[2] ? parseInt(match[2].slice(1)) : (match[1].startsWith('https') ? 443 : 80);
+            if (currentPort !== port) {
+              // 拼接新url
+              updatedUrl = match[1] + (port ? `:${port}` : '') + (match[3] || '');
               needsUpdate = true;
-              console.log(`站点 ${site.id}: URL 端口 ${oldPort} -> ${port}`);
             }
-          } else {
-             console.log(`站点 ${site.id}: URL "${site.url}" 没有明确的端口号可更新。`);
           }
         } catch (e) {
-          console.warn(`站点 ${site.id}: 解析或更新 URL "${site.url}" 失败: ${e.message}`);
+          console.warn(`站点 ${site.id}: 解析或更新 URL 失败: ${e.message}`);
         }
       }
 
-      // 尝试更新 Logo URL 端口
+      // 尝试更新 Logo URL 端口（用正则，不用 new URL）
       if (site.logo && site.logo.startsWith('http')) {
-         try {
-            const logoUrlObject = new URL(site.logo);
-            if (logoUrlObject.port) {
-                const oldPort = logoUrlObject.port;
-                // 直接操作字符串替换端口号
-                const portPattern = `:${oldPort}`;
-                const newPort = `:${port}`;
-                
-                // 使用字符串替换保持原 URL 其他特性不变
-                updatedLogo = site.logo.replace(portPattern, newPort);
-                
-                if (updatedLogo !== site.logo) {
-                    needsUpdate = true;
-                    console.log(`站点 ${site.id}: Logo 端口 ${oldPort} -> ${port}`);
-                }
-            } else {
-                console.log(`站点 ${site.id}: Logo URL "${site.logo}" 没有明确的端口号可更新。`);
+        try {
+          let updated = site.logo;
+          const portPattern = /^(https?:\/\/[^/:]+)(:\d+)?(\/?.*)$/i;
+          const match = updated.match(portPattern);
+          if (match) {
+            const currentPort = match[2] ? parseInt(match[2].slice(1)) : (match[1].startsWith('https') ? 443 : 80);
+            if (currentPort !== port) {
+              updatedLogo = match[1] + (port ? `:${port}` : '') + (match[3] || '');
+              needsUpdate = true;
             }
-         } catch (e) {
-           console.warn(`站点 ${site.id}: 解析或更新 Logo URL "${site.logo}" 失败: ${e.message}`);
-         }
+          }
+        } catch (e) {
+          console.warn(`站点 ${site.id}: 解析或更新 Logo URL 失败: ${e.message}`);
+        }
       }
 
       if (needsUpdate) {
-        const updateQuery = `
-          UPDATE sites
-          SET url = ?, logo = ?
-          WHERE id = ?;
-        `;
-        const promise = new Promise((resolve, reject) => {
-          db.connection.query(updateQuery, [updatedUrl, updatedLogo, site.id], (errorUpdate, results) => {
-            if (errorUpdate) {
-              console.error(`更新网站 ID ${site.id} 失败:`, errorUpdate);
-              reject({ id: site.id, error: errorUpdate });
-            } else {
-              categoriesUpdated.add(site.category_id);
-              resolve({ id: site.id, affectedRows: results.affectedRows });
-            }
-          });
-        });
-        updatePromises.push(promise);
+        try {
+          await db.query('UPDATE sites SET url = ?, logo = ? WHERE id = ?', [updatedUrl, updatedLogo, site.id]);
+          updatedCount++;
+          categoriesUpdated.add(site.category_id);
+        } catch (errorUpdate) {
+          failedUpdates.push({ id: site.id, error: errorUpdate });
+        }
       }
-    });
-
-    if (updatePromises.length === 0) {
-      return res.json({ 
-        code: 0, 
-        message: '根据指定条件，没有需要更新端口的网站 (URL/Logo 中可能未包含明确的端口号)。' 
-      });
     }
 
-    // 4. 执行所有更新操作
-    Promise.allSettled(updatePromises)
-      .then(results => {
-        results.forEach(result => {
-          if (result.status === 'fulfilled' && result.value.affectedRows > 0) {
-            updatedCount++;
-          } else if (result.status === 'rejected') {
-            failedUpdates.push(result.reason);
-          } else if (result.status === 'fulfilled' && result.value.affectedRows === 0) {
-             console.log(`站点 ${result.value.id} 更新影响行数为 0。`);
-          }
-        });
-
-        // 5. 返回结果
-        if (failedUpdates.length > 0) {
-          res.status(500).json({
-            code: 1,
-            message: `尝试更新 ${updatePromises.length} 个网站，成功 ${updatedCount} 个，失败 ${failedUpdates.length} 个。`,
-            failures: failedUpdates.map(f => ({ id: f.id, error: f.error.code || f.error.message }))
-          });
-        } else {
-          res.json({ 
-            code: 0, 
-            message: `成功为 ${updatedCount} 个网站的 URL/Logo 更新端口号为 ${port}`,
-            updated_categories: Array.from(categoriesUpdated)
-          });
-        }
+    if (failedUpdates.length > 0) {
+      return res.status(500).json({
+        code: 1,
+        message: `尝试更新 ${sitesToUpdate.length} 个网站，成功 ${updatedCount} 个，失败 ${failedUpdates.length} 个。`,
+        failures: failedUpdates.map(f => ({ id: f.id, error: f.error.code || f.error.message }))
       });
-  });
+    } else {
+      return res.json({
+        code: 0,
+        message: `成功为 ${updatedCount} 个网站的 URL/Logo 更新端口号为 ${port}`,
+        updated_categories: Array.from(categoriesUpdated)
+      });
+    }
+  } catch (error) {
+    console.error('批量更新端口失败:', error);
+    res.status(500).json({ code: 1, message: '批量更新端口失败' });
+  }
 });
 
 module.exports = router;

@@ -2,9 +2,13 @@
 import axios from 'axios';
 import { getToken, removeToken } from '../utils/auth';
 
+// 自动切换 API 基础地址
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+export const API_BASE = isDev ? 'http://localhost:3602/api' : '/api';
+
 // 配置 Axios 实例
 const apiClient = axios.create({
-  baseURL: '/api', // 假设所有 API 请求都以 /api 开头，需要根据实际后端配置调整
+  baseURL: API_BASE,
   timeout: 5000, // 请求超时时间
 });
 
