@@ -223,8 +223,8 @@
 
             // --- Data Loading and Rendering ---
             // 使用API获取数据
-            //  fetch('/api/navigation')
-               fetch('http://192.168.31.26:3602/api/navigation')
+             fetch('/api/navigation')
+            //    fetch('http://192.168.31.26:3602/api/navigation')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('网络请求失败: ' + response.statusText);
