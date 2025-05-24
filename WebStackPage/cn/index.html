@@ -54,6 +54,10 @@
             });
         }
     </script>
+    <style>
+        /* URL 显示样式 */
+       
+    </style>
 </head>
 
 <body class="page-body">
@@ -98,18 +102,23 @@
                         </a>
                     </li>
                     <li class="dropdown hover-line language-switcher">
-                        <a href="../cn/index.html" class="dropdown-toggle" data-toggle="dropdown">
-                            <img src="../assets/images/flags/flag-cn.png" alt="flag-cn" /> 外网
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" id="dropdown-toggle">
+                            <img src="../assets/images/flags/flag-cn.png" alt="flag-cn" /> <span id="current-network-type">外网</span>
                         </a>
                         <ul class="dropdown-menu languages">
-                            <li>
-                                <a href="#">
-                                    <img src="../assets/images/flags/flag-cn.png" alt="flag-us" /> 内网
+                            <li id="li-main">
+                                <a href="#" onclick="switchNetworkType('main'); return false;">
+                                    <img src="../assets/images/flags/flag-cn.png" alt="flag-cn" /> 外网
                                 </a>
                             </li>
-                            <li class="active">
-                                <a href="../cn/index.html">
-                                    <img src="../assets/images/flags/flag-cn.png" alt="flag-cn" /> 外网
+                            <li id="li-internal">
+                                <a href="#" onclick="switchNetworkType('internal'); return false;">
+                                    <img src="../assets/images/flags/flag-cn.png" alt="flag-cn" /> 内网
+                                </a>
+                            </li>
+                            <li id="li-backup">
+                                <a href="#" onclick="switchNetworkType('backup'); return false;">
+                                    <img src="../assets/images/flags/flag-cn.png" alt="flag-cn" /> 备用
                                 </a>
                             </li>
                         </ul>
@@ -214,8 +223,8 @@
 
             // --- Data Loading and Rendering ---
             // 使用API获取数据
-             fetch('/api/navigation')
-            //    fetch('http://192.168.31.26:3602/api/navigation')
+            //  fetch('/api/navigation')
+               fetch('http://192.168.31.26:3602/api/navigation')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('网络请求失败: ' + response.statusText);
@@ -358,19 +367,51 @@
                 }
                 // 如果已经是其他 http/https 地址 (非内网Lsky)，则保持不变
 
+                // 根据 URL 类型选择合适的 URL
+                let targetUrl = site.url;
+                const urlType = getStoredUrlType();
+                
+                if (urlType === 'backup' && site.backup_url) {
+                    targetUrl = site.backup_url;
+                } else if (urlType === 'internal' && site.internal_url) {
+                    targetUrl = site.internal_url;
+                }
+
+                // 更新网站链接的显示
+                const siteLink = document.createElement('a');
+                siteLink.href = targetUrl;
+                siteLink.target = '_blank';
+                siteLink.onclick = function(e) {
+                    e.preventDefault();
+                    window.open(targetUrl, '_blank');
+                };
+                siteLink.innerHTML = `
+                    <div class="web-item">
+                        <img src="${site.logo}" alt="${site.title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMThjLTQuNDEgMC04LTMuNTktOC04czMuNTktOCA4LTggOCAzLjU5IDggOC0zLjU5IDgtOCA4eiIvPjwvc3ZnPg=='">
+                        <div class="web-info">
+                            <h3>${site.title}</h3>
+                            <p>${site.desc || ''}</p>
+                            <div class="url-info">
+                                <span class="url-type" data-type="${urlType}">${urlType === 'internal' ? '内网' : urlType === 'backup' ? '备用' : '外网'}</span>
+                                <span class="url-text">${targetUrl}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
                 sectionHtml += `
                     <div class="col-sm-3">
-                        <div class="xe-widget xe-conversations box2 label-info" onclick="window.open('${site.url}', '_blank')" data-toggle="tooltip" data-placement="bottom" title="${site.url}">
+                        <div class="xe-widget xe-conversations box2 label-info" onclick="window.open('${targetUrl}', '_blank')" data-toggle="tooltip" data-placement="bottom" title="${targetUrl}">
                             <div class="xe-comment-entry">
                                 <a class="xe-user-img">
-                                    <img data-src="${logoSrc || '../assets/images/favicon.png'}" class="lozad img-circle" width="40"> 
-                                    <!-- 添加一个备用图片 -->
+                                    <img data-src="${logoSrc || '../assets/images/favicon.png'}" class="lozad img-circle" width="40">
                                 </a>
                                 <div class="xe-comment">
                                     <a href="#" class="xe-user-name overflowClip_1">
                                         <strong>${site.title}</strong>
                                     </a>
                                     <p class="overflowClip_2">${site.desc}</p>
+                                  
                                 </div>
                             </div>
                         </div>
@@ -396,6 +437,52 @@
                 if (callNow) func.apply(context, args);
             };
         };
+
+        // 网络类型本地存储相关函数
+        function getStoredUrlType() {
+            return localStorage.getItem('url_type') || 'main';
+        }
+
+        function setStoredUrlType(type) {
+            localStorage.setItem('url_type', type);
+        }
+
+
+        function switchNetworkType(type) {
+            setStoredUrlType(type);
+            window.location.reload(); // 只刷新页面，不跳转参数
+        }
+
+        // 更新当前网络类型显示
+        function updateNetworkTypeDisplay() {
+            const urlType = getStoredUrlType();
+            const displayText = urlType === 'internal' ? '内网' : urlType === 'backup' ? '备用' : '外网';
+            // 修改按钮文字（保留图片）
+            const btn = document.getElementById('current-network-type');
+            if (btn) {
+                // 只修改文本部分
+                btn.textContent = ' ' + displayText;
+            }
+        }
+
+        // 新增：根据url_type高亮active
+        function updateNetworkTypeActive() {
+            const urlType = getStoredUrlType();
+            ['main', 'internal', 'backup'].forEach(type => {
+                const li = document.getElementById('li-' + type);
+                if (li) {
+                    if (type === urlType) {
+                        li.classList.add('active');
+                    } else {
+                        li.classList.remove('active');
+                    }
+                }
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNetworkTypeDisplay();
+            updateNetworkTypeActive();
+        });
 
     </script>
     <!-- Bottom Scripts -->

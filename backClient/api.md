@@ -279,12 +279,14 @@ server.js 484-484
     {
         "id": "number",
         "category_id": "number",
-        "category_name": "string",
         "url": "string",
+        "backup_url": "string",
+        "internal_url": "string",
         "logo": "string",
         "title": "string",
         "desc": "string",
-        "sort_order": "number"
+        "sort_order": "number",
+        "update_port_enabled": "boolean"
     }
 ]
  ```
@@ -301,10 +303,13 @@ server.js 484-484
     "category_id": "number",
     "category_name": "string",
     "url": "string",
+    "backup_url": "string",
+    "internal_url": "string",
     "logo": "string",
     "title": "string",
     "desc": "string",
-    "sort_order": "number"
+    "sort_order": "number",
+    "update_port_enabled": "boolean"
 }
  ```
 
@@ -319,12 +324,15 @@ server.js 484-484
 - 请求体 ：
 ```json
 {
-    "category_id": "number", // 必填，分类ID
-    "url": "string",        // 必填，网站URL
-    "logo": "string",       // 可选，网站logo
-    "title": "string",      // 必填，网站标题
-    "desc": "string",       // 可选，网站描述
-    "sort_order": "number"  // 可选，排序顺序，默认为0
+    "category_id": "number",     // 必填，分类ID
+    "url": "string",            // 必填，网站URL
+    "title": "string",          // 必填，网站标题
+    "backup_url": "string",     // 可选，备用URL
+    "internal_url": "string",   // 可选，内部URL
+    "logo": "string",           // 可选，网站图标
+    "desc": "string",           // 可选，网站描述
+    "sort_order": "number",     // 可选，排序顺序
+    "update_port_enabled": "boolean" // 可选，是否启用端口更新
 }
  ```
 
@@ -332,12 +340,7 @@ server.js 484-484
 ```json
 {
     "id": "number",
-    "category_id": "number",
-    "url": "string",
-    "logo": "string",
-    "title": "string",
-    "desc": "string",
-    "sort_order": "number"
+    "message": "string"
 }
  ```
 
@@ -354,19 +357,22 @@ server.js 484-484
 - 请求体 ：
 ```json
 {
-    "category_id": "number", // 必填，分类ID
-    "url": "string",        // 必填，网站URL
-    "logo": "string",       // 可选，网站logo
-    "title": "string",      // 必填，网站标题
-    "desc": "string",       // 可选，网站描述
-    "sort_order": "number"  // 可选，排序顺序
+    "category_id": "number",     // 必填，分类ID
+    "url": "string",            // 必填，网站URL
+    "title": "string",          // 必填，网站标题
+    "backup_url": "string",     // 可选，备用URL
+    "internal_url": "string",   // 可选，内部URL
+    "logo": "string",           // 可选，网站图标
+    "desc": "string",           // 可选，网站描述
+    "sort_order": "number",     // 可选，排序顺序
+    "update_port_enabled": "boolean" // 可选，是否启用端口更新
 }
  ```
 
 - 返回值 ：
 ```json
 {
-    "message": "网站更新成功"
+    "message": "string"
 }
  ```
 
@@ -377,14 +383,14 @@ server.js 484-484
   - 500 ：服务器内部错误
 
 ### 删除网站
-- 接口 ： POST /api/sites/delete/:id
+- 接口 ： DELETE /api/sites/:id
 - 描述 ：删除网站（需要管理员权限）
 - 参数 ：
   - id ：网站ID（路径参数）
 - 返回值 ：
 ```json
 {
-    "message": "网站删除成功"
+    "message": "string"
 }
  ```
 
@@ -430,3 +436,169 @@ server.js 484-484
 2. 错误响应通常包含 message 字段说明错误原因
 3. 部分接口的请求和响应可能包含额外的字段，这里只列出了主要字段
 4. 需要管理员权限的接口需要在请求头中包含有效的JWT token
+
+### 站点管理 API
+
+#### 1. 获取所有站点列表
+```
+GET /api/sites
+
+响应示例：
+[
+    {
+        "id": "number",
+        "category_id": "number",
+        "url": "string",
+        "backup_url": "string",
+        "internal_url": "string",
+        "logo": "string",
+        "title": "string",
+        "desc": "string",
+        "sort_order": "number",
+        "update_port_enabled": "boolean"
+    }
+]
+```
+
+#### 2. 获取单个站点详情
+```
+GET /api/sites/:id
+
+响应示例：
+{
+    "id": "number",
+    "category_id": "number",
+    "category_name": "string",
+    "url": "string",
+    "backup_url": "string",
+    "internal_url": "string",
+    "logo": "string",
+    "title": "string",
+    "desc": "string",
+    "sort_order": "number",
+    "update_port_enabled": "boolean"
+}
+```
+
+#### 3. 添加新站点
+```
+POST /api/sites
+
+请求体：
+{
+    "category_id": "number",     // 必填，分类ID
+    "url": "string",            // 必填，网站URL
+    "title": "string",          // 必填，网站标题
+    "backup_url": "string",     // 可选，备用URL
+    "internal_url": "string",   // 可选，内部URL
+    "logo": "string",           // 可选，网站图标
+    "desc": "string",           // 可选，网站描述
+    "sort_order": "number",     // 可选，排序顺序
+    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+}
+
+响应示例：
+{
+    "id": "number",
+    "message": "string"
+}
+```
+
+#### 4. 更新站点信息
+```
+PUT /api/sites/:id
+或
+POST /api/sites/update/:id
+
+请求体：
+{
+    "category_id": "number",     // 必填，分类ID
+    "url": "string",            // 必填，网站URL
+    "title": "string",          // 必填，网站标题
+    "backup_url": "string",     // 可选，备用URL
+    "internal_url": "string",   // 可选，内部URL
+    "logo": "string",           // 可选，网站图标
+    "desc": "string",           // 可选，网站描述
+    "sort_order": "number",     // 可选，排序顺序
+    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+}
+
+响应示例：
+{
+    "message": "string"
+}
+```
+
+#### 5. 删除站点
+```
+DELETE /api/sites/:id
+
+响应示例：
+{
+    "message": "string"
+}
+```
+
+#### 6. 批量更新站点分类
+```
+POST /api/sites/batch-update-category
+
+请求体：
+{
+    "site_ids": ["number"],     // 必填，站点ID数组
+    "category_id": "number",    // 必填，目标分类ID
+    "port": "number",          // 可选，要更新的端口号
+    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+}
+
+响应示例：
+{
+    "message": "string"
+}
+```
+
+#### 7. 批量更新站点端口
+```
+POST /api/sites/update-ports
+
+请求体：
+{
+    "port": "number"  // 必填，要更新的端口号（0-65535之间的整数）
+}
+
+响应示例：
+{
+    "code": "number",
+    "message": "string",
+    "updated_categories": ["number"]  // 更新了哪些分类下的网站
+}
+```
+
+#### 8. 获取站点重定向信息
+```
+GET /api/redirect?id=:id
+
+响应示例：
+{
+    "success": "boolean",
+    "data": {
+        "id": "number",
+        "url": "string",
+        "backup_url": "string",
+        "internal_url": "string",
+        "logo": "string",
+        "title": "string",
+        "desc": "string"
+    }
+}
+```
+
+### 注意事项：
+
+1. 所有需要管理员权限的接口都需要在请求头中携带 `Authorization: Bearer <token>`
+2. 所有请求和响应的 Content-Type 都是 `application/json`
+3. URL 字段必须是有效的 URL 格式
+4. 端口号必须在 0-65535 之间
+5. 批量操作时，如果部分操作失败，会返回详细的错误信息
+6. 更新操作会返回 404 错误如果目标站点不存在
+7. 删除操作会返回 404 错误如果目标站点不存在

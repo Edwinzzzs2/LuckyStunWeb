@@ -11,20 +11,22 @@ async function runMigration(sqlFileName) {
     // 分割 SQL 语句
     const sqlStatements = migrationSql.split(';').filter(statement => statement.trim() !== '');
 
-    // 逐条执行 SQL 语句
-    for (const statement of sqlStatements) {
-      await new Promise((resolve, reject) => {
+    // 使用事务执行所有SQL语句
+    await db.transaction(async (connection) => {
+      for (const statement of sqlStatements) {
         console.log(`执行 SQL: ${statement.trim()}`);
-        db.connection.query(statement, (error, results) => {
-          if (error) {
-            console.error('执行 SQL 语句失败:', error);
-            return reject(error);
-          }
-          console.log('执行 SQL 语句成功');
-          resolve(results);
+        await new Promise((resolve, reject) => {
+          connection.query(statement, (error, results) => {
+            if (error) {
+              console.error('执行 SQL 语句失败:', error);
+              return reject(error);
+            }
+            console.log('执行 SQL 语句成功');
+            resolve(results);
+          });
         });
-      });
-    }
+      }
+    });
     
     console.log(`迁移文件 ${sqlFileName} 执行完成`);
   } catch (error) {

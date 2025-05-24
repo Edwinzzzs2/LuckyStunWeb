@@ -1,11 +1,13 @@
+require('dotenv').config();
+
 module.exports = {
     server: {
-        port: 3602
+        port: process.env.PORT || 3602
     },
     database: {
-        host: '192.168.31.80',
-        user: 'root',
-        password: 'Edwinzzzs2',
-        database: 'webstack'
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'webstack'
     }
 }; 
