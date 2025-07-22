@@ -286,7 +286,7 @@ server.js 484-484
         "title": "string",
         "desc": "string",
         "sort_order": "number",
-        "update_port_enabled": "boolean"
+        "is_visible": "boolean"
     }
 ]
  ```
@@ -309,7 +309,7 @@ server.js 484-484
     "title": "string",
     "desc": "string",
     "sort_order": "number",
-    "update_port_enabled": "boolean"
+    "is_visible": "boolean"
 }
  ```
 
@@ -332,7 +332,7 @@ server.js 484-484
     "logo": "string",           // 可选，网站图标
     "desc": "string",           // 可选，网站描述
     "sort_order": "number",     // 可选，排序顺序
-    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+    "is_visible": "boolean" // 可选，网站显示状态，true=显示，false=隐藏
 }
  ```
 
@@ -365,7 +365,7 @@ server.js 484-484
     "logo": "string",           // 可选，网站图标
     "desc": "string",           // 可选，网站描述
     "sort_order": "number",     // 可选，排序顺序
-    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+    "is_visible": "boolean" // 可选，网站显示状态，true=显示，false=隐藏
 }
  ```
 
@@ -403,7 +403,7 @@ server.js 484-484
 ## 导航数据接口
 ### 获取导航数据
 - 接口 ： GET /api/navigation
-- 描述 ：获取完整的导航数据，包含分类和网站信息
+- 描述 ：获取完整的导航数据，包含分类和网站信息（只返回显示状态为true的网站）
 - 返回值 ：
 ```json
 [
@@ -455,7 +455,7 @@ GET /api/sites
         "title": "string",
         "desc": "string",
         "sort_order": "number",
-        "update_port_enabled": "boolean"
+        "is_visible": "boolean"
     }
 ]
 ```
@@ -476,7 +476,7 @@ GET /api/sites/:id
     "title": "string",
     "desc": "string",
     "sort_order": "number",
-    "update_port_enabled": "boolean"
+    "is_visible": "boolean"
 }
 ```
 
@@ -494,7 +494,7 @@ POST /api/sites
     "logo": "string",           // 可选，网站图标
     "desc": "string",           // 可选，网站描述
     "sort_order": "number",     // 可选，排序顺序
-    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+    "is_visible": "boolean" // 可选，网站显示状态，true=显示，false=隐藏
 }
 
 响应示例：
@@ -520,7 +520,7 @@ POST /api/sites/update/:id
     "logo": "string",           // 可选，网站图标
     "desc": "string",           // 可选，网站描述
     "sort_order": "number",     // 可选，排序顺序
-    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+    "is_visible": "boolean" // 可选，网站显示状态，true=显示，false=隐藏
 }
 
 响应示例：
@@ -548,7 +548,7 @@ POST /api/sites/batch-update-category
     "site_ids": ["number"],     // 必填，站点ID数组
     "category_id": "number",    // 必填，目标分类ID
     "port": "number",          // 可选，要更新的端口号
-    "update_port_enabled": "boolean" // 可选，是否启用端口更新
+    "is_visible": "boolean" // 可选，网站显示状态，true=显示，false=隐藏
 }
 
 响应示例：

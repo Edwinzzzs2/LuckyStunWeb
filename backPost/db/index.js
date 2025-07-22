@@ -111,7 +111,7 @@ async function createTables() {
         title VARCHAR(255) NOT NULL,
         \`desc\` TEXT,
         sort_order INT DEFAULT 0,
-        update_port_enabled BOOLEAN DEFAULT TRUE,
+        is_visible BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`;
@@ -204,4 +204,4 @@ module.exports = {
   pool,
   query,
   transaction
-}; 
+};

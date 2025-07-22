@@ -17,6 +17,7 @@ router.get('/', async (req, res) => {
     const sitesQuery = `
       SELECT id, category_id, url, backup_url, internal_url, logo, title, \`desc\`, sort_order
       FROM sites
+      WHERE is_visible = 1
       ORDER BY category_id ASC, sort_order ASC, id ASC;
     `;
 
