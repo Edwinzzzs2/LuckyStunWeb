@@ -1,6 +1,6 @@
 {
-  "name": "个人导航页",
-  "short_name": "webNav",
+  "name": "webAde",
+  "short_name": "webAde",
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -31,5 +31,5 @@
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#FFFFFF",
-  "description": "我的个人导航页面"
+  "description": "webAd网址导航"
 }

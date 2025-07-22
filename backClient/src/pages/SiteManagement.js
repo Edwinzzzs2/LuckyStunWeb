@@ -128,12 +128,18 @@ const SiteManagement = () => {
     try {
       const values = await batchForm.validateFields();
       setLoading(true);
-      const response = await batchUpdateSiteCategory({
+      
+      // 构建请求参数，只在选择了分类时才包含category_id
+      const requestData = {
         site_ids: selectedRowKeys,
-        category_id: values.category_id,
         is_visible: values.is_visible,
-        port: values.port,
-      });
+      };
+      
+      if (values.category_id !== undefined && values.category_id !== null) {
+        requestData.category_id = values.category_id;
+      }
+      
+      const response = await batchUpdateSiteCategory(requestData);
       messageApi.success(response.data.message);
       setSelectedRowKeys([]);
       setIsBatchModalVisible(false);
@@ -212,7 +218,6 @@ const SiteManagement = () => {
       title: "序号",
       key: "index",
       width: 60,
-      fixed: "left",
       render: (text, record, index) => index + 1,
     },
     {
@@ -233,7 +238,22 @@ const SiteManagement = () => {
         );
       },
     },
-
+{
+      title: "显隐",
+      dataIndex: "is_visible",
+      key: "is_visible",
+      width: 80,
+      render: (enabled, record) => (
+        <Switch
+          checked={enabled}
+          checkedChildren="显示"
+          unCheckedChildren="隐藏"
+          size="small"
+          onChange={(checked) => handleVisibilityChange(record.id, checked)}
+          loading={updatingVisibility === record.id}
+        />
+      ),
+    },
     {
       title: "标题",
       dataIndex: "title",
@@ -315,30 +335,13 @@ const SiteManagement = () => {
 
     { title: "ID", dataIndex: "id", key: "id", width: 50 },
     {
-      title: "显示状态",
-      dataIndex: "is_visible",
-      key: "is_visible",
-      width: 120,
-      fixed: "right",
-      render: (enabled, record) => (
-        <Switch
-          checked={enabled}
-          checkedChildren="显示"
-          unCheckedChildren="隐藏"
-          size="small"
-          onChange={(checked) => handleVisibilityChange(record.id, checked)}
-          loading={updatingVisibility === record.id}
-        />
-      ),
-    },
-    {
       title: "操作",
       key: "action",
-      width: 90,
+      width: 70,
       fixed: "right", // 固定在左侧
       render: (_, record) => (
-        <Space size="small">
-          <Button
+        <Space size='small'>
+         <Button
             type="text"
             icon={<EditOutlined />}
             onClick={() => showModal(record)}
@@ -389,12 +392,11 @@ const SiteManagement = () => {
           }}
         >
           <Input.Search
-            placeholder="按标题搜索"
-            style={{ width: 200 }}
+            placeholder="按标题或主网站URL搜索"
+            style={{ width: 240 }}
             allowClear
             onChange={(e) => setSearchTitle(e.target.value)}
             value={searchTitle}
-            enterButton
           />
           <Space>
             {selectedRowKeys.length > 0 && (
@@ -403,7 +405,7 @@ const SiteManagement = () => {
                 icon={<SwapOutlined />}
                 onClick={showBatchModal}
               >
-                批量操作
+                批量
               </Button>
             )}
             <Button
@@ -411,7 +413,7 @@ const SiteManagement = () => {
               icon={<PlusOutlined />}
               onClick={() => showModal()}
             >
-              添加网站
+              添加
             </Button>
           </Space>
         </div>
@@ -421,10 +423,11 @@ const SiteManagement = () => {
       {(() => {
         let filteredSites = sites;
 
-        // 按标题搜索过滤
+        // 按标题和主网站URL搜索过滤
         if (searchTitle) {
           filteredSites = filteredSites.filter((site) =>
-            site.title.toLowerCase().includes(searchTitle.toLowerCase())
+            site.title.toLowerCase().includes(searchTitle.toLowerCase()) ||
+            site.url.toLowerCase().includes(searchTitle.toLowerCase())
           );
         }
 
@@ -646,10 +649,9 @@ const SiteManagement = () => {
         >
           <Form.Item
             name="category_id"
-            label="目标分类"
-            rules={[{ required: true, message: "请选择目标分类!" }]}
+            label="目标分类（可选）"
           >
-            <Select placeholder="选择分类">
+            <Select placeholder="选择分类（不选择则保持原分类）" allowClear>
               {categories.map((cat) => (
                 <Select.Option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -671,18 +673,6 @@ const SiteManagement = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            name="port"
-            label="设置端口"
-            tooltip="可选项，批量更新URL中的端口"
-          >
-            <InputNumber
-              placeholder="例如: 8080"
-              style={{ width: "100%" }}
-              min={1}
-              max={65535}
-            />
-          </Form.Item>
 
           <div style={{ marginTop: "16px", color: "#999" }}>
             已选择 {selectedRowKeys.length} 个站点

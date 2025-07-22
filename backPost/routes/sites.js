@@ -233,30 +233,41 @@ router.post("/delete/:id", authenticateAdmin, async (req, res) => {
 // 批量更新站点分类
 router.post("/batch-update-category", authenticateAdmin, async (req, res) => {
   try {
-    const { site_ids, category_id, port, is_visible } = req.body;
+    const { site_ids, category_id, is_visible } = req.body;
 
-    if (!Array.isArray(site_ids) || site_ids.length === 0 || !category_id) {
+    if (!Array.isArray(site_ids) || site_ids.length === 0) {
       return res
         .status(400)
-        .json({ message: "站点ID列表和目标分类ID为必填项" });
-    }
-
-    // 验证目标分类是否存在
-    const checkCategoryQuery = "SELECT id FROM categories WHERE id = ?";
-    const categories = await db.query(checkCategoryQuery, [category_id]);
-
-    if (categories.length === 0) {
-      return res.status(400).json({ message: "目标分类不存在" });
+        .json({ message: "站点ID列表为必填项" });
     }
 
     // 构建更新查询
-    let updateFields = ["category_id = ?"];
-    let updateValues = [category_id];
+    let updateFields = [];
+    let updateValues = [];
+
+    // 如果提供了category_id参数，验证并添加到更新字段
+    if (category_id !== undefined && category_id !== null) {
+      // 验证目标分类是否存在
+      const checkCategoryQuery = "SELECT id FROM categories WHERE id = ?";
+      const categories = await db.query(checkCategoryQuery, [category_id]);
+
+      if (categories.length === 0) {
+        return res.status(400).json({ message: "目标分类不存在" });
+      }
+
+      updateFields.push("category_id = ?");
+      updateValues.push(category_id);
+    }
 
     // 如果提供了is_visible参数，添加到更新字段
     if (is_visible !== undefined) {
       updateFields.push("is_visible = ?");
       updateValues.push(is_visible);
+    }
+
+    // 检查是否有字段需要更新
+    if (updateFields.length === 0) {
+      return res.status(400).json({ message: "至少需要提供一个更新字段" });
     }
 
     // 构建并执行更新查询
@@ -269,59 +280,18 @@ router.post("/batch-update-category", authenticateAdmin, async (req, res) => {
       return res.status(404).json({ message: "未找到要更新的站点" });
     }
 
-    // 如果提供了端口号，则更新端口
-    if (port !== undefined) {
-      // 验证端口号
-      if (
-        typeof port !== "number" ||
-        !Number.isInteger(port) ||
-        port < 0 ||
-        port > 65535
-      ) {
-        return res
-          .status(400)
-          .json({ message: "无效的端口号，应为 0-65535 之间的整数" });
-      }
-
-      // 查询需要更新的网站
-      const selectQuery = "SELECT id, url, logo FROM sites WHERE id IN (?)";
-      const sitesToUpdate = await db.query(selectQuery, [site_ids]);
-
-      // 更新每个网站的URL
-      for (const site of sitesToUpdate) {
-        try {
-          // 用正则替换端口，不用 new URL
-          let updated = site.url;
-          const portPattern = /^(https?:\/\/[^/:]+)(:\d+)?(\/?.*)$/i;
-          const match = updated.match(portPattern);
-          if (match) {
-            const currentPort = match[2]
-              ? parseInt(match[2].slice(1))
-              : match[1].startsWith("https")
-              ? 443
-              : 80;
-            if (currentPort !== port) {
-              updated = match[1] + (port ? `:${port}` : "") + (match[3] || "");
-              const updateUrlQuery = "UPDATE sites SET url = ? WHERE id = ?";
-              await db.query(updateUrlQuery, [updated, site.id]);
-            }
-          }
-        } catch (error) {
-          console.error(`更新网站 ${site.id} 的URL失败:`, error);
-        }
-      }
-    }
-
-    res.json({ message: "批量更新站点分类成功" });
+    const message = category_id !== undefined && category_id !== null 
+      ? "批量更新站点分类成功" 
+      : "批量更新站点状态成功";
+    res.json({ message });
   } catch (error) {
-    console.error("批量更新站点分类失败:", error);
-    res.status(500).json({ message: "批量更新站点分类失败" });
+    console.error("批量更新站点失败:", error);
+    res.status(500).json({ message: "批量更新站点失败" });
   }
 });
 
-// 批量更新指定分类下网站的URL和Logo端口号
+// webhook更新指定域名的端口号，包括主副网址和icon
 router.post("/update-ports", async (req, res) => {
-  console.log("update-ports");
   try {
     const { port, domains, ids } = req.body;
 
