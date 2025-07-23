@@ -40,10 +40,41 @@
                 navigator.serviceWorker.register('./service-worker.js')
                     .then(function(registration) {
                         console.log('ServiceWorker 注册成功: ', registration.scope);
+                        
+                        // 检查更新
+                        registration.addEventListener('updatefound', () => {
+                            console.log('发现新的Service Worker版本');
+                            const newWorker = registration.installing;
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed') {
+                                    if (navigator.serviceWorker.controller) {
+                                        // 有新版本可用，提示用户刷新
+                                        console.log('新版本已安装，准备刷新页面');
+                                        if (confirm('发现新版本，是否立即刷新页面？')) {
+                                            window.location.reload();
+                                        }
+                                    } else {
+                                        console.log('首次安装Service Worker');
+                                    }
+                                }
+                            });
+                        });
+                        
+                        // 定期检查更新
+                        setInterval(() => {
+                            registration.update();
+                        }, 60000); // 每分钟检查一次
                     })
                     .catch(function(error) {
                         console.log('ServiceWorker 注册失败: ', error);
                     });
+                    
+                // 监听Service Worker控制器变化
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('Service Worker控制器已更改，刷新页面');
+                    window.location.reload();
+                });
             });
         }
     </script>

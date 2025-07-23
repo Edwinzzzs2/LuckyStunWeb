@@ -1,5 +1,5 @@
-// 缓存名称
-const CACHE_NAME = 'web-navigation-cache-v1';
+// 缓存名称 - 更新版本号强制刷新缓存
+const CACHE_NAME = 'web-navigation-cache-v2';
 
 // 需要缓存的资源列表
 const urlsToCache = [
@@ -19,40 +19,52 @@ const urlsToCache = [
   '/assets/images/logo@2x.png',
   '/assets/images/logo-collapsed@2x.png',
   '/assets/images/favicon.png',
-  '/assets/images/icons/icon-192x192.png'
+  '/assets/images/icons/pwa-192x192.png',
+  '/assets/images/icons/pwa-512x512.png'
 ];
 
 // 安装 Service Worker
 self.addEventListener('install', event => {
+  console.log('Service Worker 安装中...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(async cache => {
-        console.log('缓存已打开');
+        console.log('缓存已打开:', CACHE_NAME);
         for (const url of urlsToCache) {
           try {
             await cache.add(url);
+            console.log('缓存成功:', url);
           } catch (e) {
             console.warn('缓存失败:', url, e);
           }
         }
       })
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log('Service Worker 安装完成，跳过等待');
+        return self.skipWaiting();
+      })
   );
 });
 
 // 激活 Service Worker
 self.addEventListener('activate', event => {
+  console.log('Service Worker 激活中...');
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
+      console.log('现有缓存:', cacheNames);
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('删除旧缓存:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      console.log('Service Worker 激活完成，立即控制所有客户端');
+      return self.clients.claim();
+    })
   );
 });
 
@@ -151,4 +163,4 @@ async function getStoredFavorites() {
 
 async function clearStoredFavorites() {
   // 实际实现应该清除IndexedDB或其他存储中的数据
-} 
+}
