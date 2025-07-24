@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="../assets/css/xenon-skins.css">
     <link rel="stylesheet" href="../assets/css/nav.css">
     <script src="../assets/js/jquery-1.11.1.min.js"></script>
+    <script defer src="https://umami.dolast.top:10010/script.js" data-website-id="35e0e4bf-fc56-41ab-946c-160e638b6211"></script>
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
         <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
@@ -148,7 +149,7 @@
                 </ul>
                 <ul class="user-info-menu right-links list-inline list-unstyled">
                     <li class="hidden-sm hidden-xs">
-                        <a href="https://github.com/Edwinzzzs2/luckyStunWeb" target="_blank">
+                        <a href="https://github.com/Edwinzzzs2/luckyStunWeb" target="_blank" onclick="trackExternalLink('GitHub', 'https://github.com/Edwinzzzs2/luckyStunWeb')">
                             <i class="fa-github"></i> GitHub
                         </a>
                     </li>
@@ -191,6 +192,18 @@
             // observer.observe(); // Observe after content is generated
 
             $('.user-info-menu .hidden-sm').click(function () {
+                const action = $('.sidebar-menu').hasClass('collapsed') ? 'expand' : 'collapse';
+                const actionName = action === 'expand' ? '展开' : '收起';
+                
+                // Umami事件跟踪 - 记录侧边栏切换
+                if (typeof umami !== 'undefined') {
+                    umami.track(`侧边栏${actionName}`, {
+                        action: action,
+                        action_name: actionName,
+                        event_type: 'ui_interaction'
+                    });
+                }
+                
                 if ($('.sidebar-menu').hasClass('collapsed')) {
                     $('.has-sub.expanded > ul').attr("style", "")
                 } else {
@@ -206,8 +219,20 @@
             $(document).on('click', "a.smooth", function (ev) {
                 ev.preventDefault();
 
-                // Smooth scrolling logic
+                // 获取导航标签信息用于Umami跟踪
+                var navigationLabel = $(this).find('.title').text() || $(this).text().trim();
                 var targetId = $(this).attr("href");
+                
+                // Umami事件跟踪 - 记录导航点击
+                if (typeof umami !== 'undefined') {
+                    umami.track(`导航跳转: ${navigationLabel}`, {
+                        label: navigationLabel,
+                        target: targetId,
+                        category: $(this).closest('.has-sub').length > 0 ? 
+                                 $(this).closest('.has-sub').find('> a .title').text() : 'top_level',
+                        event_type: 'navigation_click'
+                    });
+                }
                 
                 // 安全地获取目标元素，处理包含特殊字符的ID
                 var targetElement = null;
@@ -441,7 +466,7 @@
 
                 sectionHtml += `
                     <div class="col-sm-3">
-                        <div class="xe-widget xe-conversations box2 label-info" onclick="window.open('${targetUrl}', '_blank')" data-toggle="tooltip" data-placement="bottom" title="${targetUrl}">
+                        <div class="xe-widget xe-conversations box2 label-info" onclick="trackWebsiteClick('${site.title}', '${targetUrl}', '${categoryName}'); window.open('${targetUrl}', '_blank')" data-toggle="tooltip" data-placement="bottom" title="${targetUrl}">
                             <div class="xe-comment-entry">
                                 <a class="xe-user-img">
                                     <img data-src="${logoSrc || '../assets/images/favicon.png'}" class="lozad img-circle" width="40">
@@ -487,6 +512,31 @@
                 .replace(/^_|_$/g, ''); // 移除开头和结尾的下划线
         }
 
+        // Umami网站点击跟踪函数
+        function trackWebsiteClick(siteTitle, siteUrl, category) {
+            if (typeof umami !== 'undefined') {
+                // 使用网站名称作为事件名称，让活动日志更直观
+                umami.track(`点击网站: ${siteTitle}`, {
+                    site_title: siteTitle,
+                    site_url: siteUrl,
+                    category: category,
+                    network_type: getStoredUrlType(),
+                    event_type: 'website_click'
+                });
+            }
+        }
+
+        // Umami外部链接跟踪函数
+        function trackExternalLink(linkName, linkUrl) {
+            if (typeof umami !== 'undefined') {
+                umami.track(`外部链接: ${linkName}`, {
+                    link_name: linkName,
+                    link_url: linkUrl,
+                    event_type: 'external_link'
+                });
+            }
+        }
+
         // 网络类型本地存储相关函数
         function getStoredUrlType() {
             return localStorage.getItem('url_type') || 'main';
@@ -498,6 +548,24 @@
 
 
         function switchNetworkType(type) {
+            const currentType = getStoredUrlType();
+            const typeNames = {
+                'main': '外网',
+                'backup': '备用',
+                'internal': '内网'
+            };
+            
+            // Umami事件跟踪 - 记录网络类型切换
+            if (typeof umami !== 'undefined') {
+                umami.track(`网络切换: ${typeNames[currentType]} → ${typeNames[type]}`, {
+                    from: currentType,
+                    to: type,
+                    from_name: typeNames[currentType],
+                    to_name: typeNames[type],
+                    event_type: 'network_switch'
+                });
+            }
+            
             setStoredUrlType(type);
             window.location.reload(); // 只刷新页面，不跳转参数
         }
