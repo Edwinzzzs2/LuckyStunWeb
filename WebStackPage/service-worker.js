@@ -1,5 +1,5 @@
 // 缓存名称 - 更新版本号强制刷新缓存
-const CACHE_NAME = 'web-navigation-cache-v2';
+const CACHE_NAME = 'web-navigation-cache-v2.1';
 
 // 需要缓存的资源列表
 const urlsToCache = [

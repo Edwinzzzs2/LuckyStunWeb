@@ -1,6 +1,6 @@
 {
-  "name": "webAde",
-  "short_name": "webAde",
+  "name": "App",
+  "short_name": "App",
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -30,6 +30,5 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
-  "theme_color": "#FFFFFF",
-  "description": "webAd网址导航"
+  "theme_color": "#FFFFFF"
 }

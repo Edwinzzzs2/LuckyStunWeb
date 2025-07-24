@@ -208,12 +208,24 @@
 
                 // Smooth scrolling logic
                 var targetId = $(this).attr("href");
+                
+                // 安全地获取目标元素，处理包含特殊字符的ID
+                var targetElement = null;
+                try {
+                    // 移除开头的 # 号
+                    var elementId = targetId.substring(1);
+                    // 使用 document.getElementById 避免 jQuery 选择器的特殊字符问题
+                    targetElement = document.getElementById(elementId);
+                } catch (e) {
+                    console.warn("Error finding target element:", targetId, e);
+                }
+                
                 // Ensure the target element exists before trying to scroll
-                if ($(targetId).length) {
+                if (targetElement) {
                     public_vars.$mainMenu.add(public_vars.$sidebarProfile).toggleClass('mobile-is-visible');
                     ps_destroy(); // Assuming this function exists and handles PerfectScrollbar
                     $("html, body").animate({
-                        scrollTop: $(targetId).offset().top - 30
+                        scrollTop: $(targetElement).offset().top - 30
                     }, {
                         duration: 500,
                         easing: "swing"
@@ -245,9 +257,9 @@
 
             // --- Data Loading and Rendering ---
             // 使用API获取数据
-            //  fetch('/api/navigation')
-            //    fetch('http://192.168.31.26:3602/api/navigation')
-           fetch('https://web.dolast.top:10010/api/navigation')
+             fetch('/api/navigation')
+            // fetch('http://192.168.31.26:3602/api/navigation')
+            // fetch('https://web.dolast.top:10010/api/navigation')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('网络请求失败: ' + response.statusText);
@@ -311,8 +323,9 @@
                     menuHtml += `<a><i class="${category.icon}"></i><span class="title">${category.name}</span></a>`;
                     menuHtml += `<ul class="sub-menu">`; // Add sub-menu class
                     category.children.forEach(child => {
+                        const cleanId = sanitizeId(child.name); // 清理ID
                         menuHtml += `<li>`;
-                        menuHtml += `<a href="#${child.name}" class="smooth"><span class="title">${child.name}</span>`;
+                        menuHtml += `<a href="#${cleanId}" class="smooth"><span class="title">${child.name}</span>`;
                         if (child.is_hot) {
                             menuHtml += `<span class="label label-pink pull-right hidden-collapsed">Hot</span>`;
                         }
@@ -321,8 +334,9 @@
                     menuHtml += `</ul></li>`;
                 } else if (category.web && category.web.length > 0) {
                     // Top-level category without sub-menu
+                    const cleanId = sanitizeId(category.name); // 清理ID
                     menuHtml += `<li>`;
-                    menuHtml += `<a href="#${category.name}" class="smooth"><i class="${category.icon}"></i><span class="title">${category.name}</span></a>`;
+                    menuHtml += `<a href="#${cleanId}" class="smooth"><i class="${category.icon}"></i><span class="title">${category.name}</span></a>`;
                     menuHtml += `</li>`;
                 }
                 // Add other top-level items like "About" if they are not in JSON
@@ -366,8 +380,11 @@
             if (!websites || websites.length === 0) return '';
 
             const lskyInternalBase = 'lsky'; // Lsky 内网基础地址
+            
+            // 清理categoryName作为有效的HTML ID
+            const cleanId = sanitizeId(categoryName);
 
-            let sectionHtml = `<h4 class="text-gray"><i class="${categoryIcon}" style="margin-right: 7px;" id="${categoryName}"></i>${categoryName}</h4>`;
+            let sectionHtml = `<h4 class="text-gray"><i class="${categoryIcon}" style="margin-right: 7px;" id="${cleanId}"></i>${categoryName}</h4>`;
             sectionHtml += '<div class="row">'; // Start the first row
 
             websites.forEach((site, index) => {
@@ -459,6 +476,15 @@
                 if (callNow) func.apply(context, args);
             };
         };
+
+        // ID清理函数 - 将包含特殊字符的字符串转换为有效的HTML ID
+        function sanitizeId(str) {
+            return str
+                .replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') // 将非字母数字和中文字符替换为下划线
+                .replace(/^[^a-zA-Z\u4e00-\u9fa5]/, 'id_$&') // 如果开头不是字母或中文，添加id_前缀
+                .replace(/_+/g, '_') // 将连续的下划线替换为单个下划线
+                .replace(/^_|_$/g, ''); // 移除开头和结尾的下划线
+        }
 
         // 网络类型本地存储相关函数
         function getStoredUrlType() {
