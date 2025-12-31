@@ -438,16 +438,6 @@ router.post("/update-ports", async (req, res) => {
         }
       }
 
-      // 更新备用URL端口
-      if (site.backup_url && isDomainMatch(site.backup_url, domains)) {
-        const newBackupUrl = updateUrlPort(site.backup_url, port);
-        if (newBackupUrl !== site.backup_url) {
-          updates.push(`backup_url = ?`);
-          params.push(newBackupUrl);
-          hasChanges = true;
-        }
-      }
-
       // 更新Logo URL端口
       if (site.logo && isDomainMatch(site.logo, domains)) {
         const newLogo = updateUrlPort(site.logo, port);

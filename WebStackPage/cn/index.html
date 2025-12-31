@@ -71,8 +71,42 @@
         }
     </script>
     <style>
-        /* URL 显示样式 */
-       
+        .quick-menu {
+            position: fixed;
+            z-index: 9999;
+            min-width: 120px;
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 4px 0;
+            display: none;
+        }
+
+        .quick-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .quick-menu li {
+            padding: 6px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .quick-menu li:hover {
+            background-color: #f5f5f5;
+        }
+
+        .quick-menu li.disabled {
+            color: #b0b0b0;
+            cursor: default;
+        }
+
+        .quick-menu li.disabled:hover {
+            background-color: transparent;
+        }
     </style>
 </head>
 
@@ -174,7 +208,15 @@
             </footer>
         </div>
     </div>
+    <div id="quick-link-menu" class="quick-menu">
+        <ul>
+            <li data-type="main">打开外网</li>
+            <li data-type="internal">打开内网</li>
+            <li data-type="backup">打开备用</li>
+        </ul>
+    </div>
     <!-- 锚点平滑移动 -->
+    <script src="../data.js"></script>
     <script type="text/javascript">
         // 原有的平滑滚动和菜单交互逻辑保持不变
         $(document).ready(function () {
@@ -269,62 +311,180 @@
 
 
             });
-            // Removed the old scroll position logic as it's handled within the click event now
 
-            // --- Data Loading and Rendering ---
-            // 使用API获取数据
-             fetch('/api/navigation')
-            // fetch('http://192.168.31.26:3602/api/navigation')
-            // fetch('https://web.dolast.top:10010/api/navigation')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('网络请求失败: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('从API获取的数据:', data);
-                    generateSidebarMenu(data);
-                    generateMainContent(data);
-                    
-                    // 关键：确保这一部分存在且没有被注释掉
-                    if (typeof setup_sidebar_menu === 'function') {
-                       setup_sidebar_menu(); // 重新初始化侧边栏
-                    } else {
-                       console.warn('setup_sidebar_menu 函数未找到，请检查 xenon-custom.js');
-                    }
+            var $quickMenu = $('#quick-link-menu');
+            var currentCard = null;
 
-                    // Observe images after content is generated
-                    observer.observe();
+            function hideQuickMenu() {
+                $quickMenu.hide();
+                currentCard = null;
+            }
 
-                    // 重新初始化相关插件
+            function showQuickMenu(card, pageX, pageY) {
+                currentCard = card;
+                var mainUrl = card.data('main-url');
+                var internalUrl = card.data('internal-url');
+                var backupUrl = card.data('backup-url');
+
+                $quickMenu.find('li').each(function () {
+                    var type = $(this).data('type');
+                    var hasUrl = type === 'main' ? !!mainUrl :
+                                 type === 'internal' ? !!internalUrl :
+                                 !!backupUrl;
+                    $(this).toggleClass('disabled', !hasUrl);
+                });
+
+                var menuWidth = $quickMenu.outerWidth();
+                var menuHeight = $quickMenu.outerHeight();
+                var winWidth = $(window).width();
+                var winHeight = $(window).height();
+
+                var left = pageX;
+                var top = pageY;
+                if (left + menuWidth > winWidth) {
+                    left = winWidth - menuWidth - 8;
+                }
+                if (top + menuHeight > winHeight) {
+                    top = winHeight - menuHeight - 8;
+                }
+
+                $quickMenu.css({ left: left, top: top }).show();
+            }
+
+            var longPressTimer = null;
+
+            $(document).on('click', '.xe-widget', function (e) {
+                if ($(e.target).closest('#quick-link-menu').length) {
+                    return;
+                }
+                var $card = $(this);
+                var targetUrl = $card.data('target-url');
+                if (!targetUrl) {
+                    return;
+                }
+                var title = $card.data('title') || '';
+                var category = $card.data('category') || '';
+                trackWebsiteClick(title, targetUrl, category);
+                window.open(targetUrl, '_blank');
+            });
+
+            $(document).on('contextmenu', '.xe-widget', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $card = $(this);
+                showQuickMenu($card, e.clientX, e.clientY);
+            });
+
+            $(document).on('touchstart', '.xe-widget', function (e) {
+                var that = this;
+                var touches = e.originalEvent.touches;
+                if (!touches || !touches[0]) return;
+                var touch = touches[0];
+                longPressTimer = setTimeout(function () {
+                    showQuickMenu($(that), touch.clientX, touch.clientY);
+                }, 600);
+            });
+
+            $(document).on('touchend touchmove touchcancel', '.xe-widget', function () {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+            });
+
+            $(document).on('click', '#quick-link-menu li', function (e) {
+                e.stopPropagation();
+                if (!currentCard) return;
+                var $item = $(this);
+                if ($item.hasClass('disabled')) return;
+
+                var type = $item.data('type');
+                var mainUrl = currentCard.data('main-url');
+                var internalUrl = currentCard.data('internal-url');
+                var backupUrl = currentCard.data('backup-url');
+
+                var url = type === 'main' ? mainUrl :
+                          type === 'internal' ? internalUrl :
+                          backupUrl;
+                if (!url) return;
+
+                var title = currentCard.data('title') || '';
+                var category = currentCard.data('category') || '';
+
+                if (typeof umami !== 'undefined') {
+                    umami.track('快捷链接点击', {
+                        site_title: title,
+                        site_url: url,
+                        category: category,
+                        link_type: type,
+                        event_type: 'website_quick_link'
+                    });
+                }
+
+                window.open(url, '_blank');
+                hideQuickMenu();
+            });
+
+            $(document).on('click scroll', function (e) {
+                if ($(e.target).closest('#quick-link-menu').length === 0) {
+                    hideQuickMenu();
+                }
+            });
+
+            function initializePage(data) {
+                console.log('加载的数据:', data);
+                generateSidebarMenu(data);
+                generateMainContent(data);
+                
+                if (typeof setup_sidebar_menu === 'function') {
+                   setup_sidebar_menu(); 
+                } else {
+                   console.warn('setup_sidebar_menu 函数未找到，请检查 xenon-custom.js');
+                }
+
+                observer.observe();
+
+                if (window.xenonCustom && typeof window.xenonCustom.refresh === 'function') {
+                    window.xenonCustom.refresh();
+                }
+
+                var handleResize = debounce(function() {
+                    console.log('Window resized, refreshing Xenon layout...');
                     if (window.xenonCustom && typeof window.xenonCustom.refresh === 'function') {
                         window.xenonCustom.refresh();
                     }
+                }, 250);
 
-                    // --- 添加窗口大小调整监听器 ---
-                    var handleResize = debounce(function() {
-                        console.log('Window resized, refreshing Xenon layout...');
-                        if (window.xenonCustom && typeof window.xenonCustom.refresh === 'function') {
-                            window.xenonCustom.refresh();
+                $(window).on('resize', handleResize);
+            }
+
+            // 本地调试
+            const isDev = true
+            // 优先使用本地 data.js 数据
+            if (typeof localData !== 'undefined' && localData && isDev) {
+                console.log('使用本地 data.js 数据');
+                initializePage(localData);
+            } else {
+                // 使用API获取数据
+                fetch('/api/navigation')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络请求失败: ' + response.statusText);
                         }
-                        // 可选：如果 refresh 不够，可能需要重新调用 setup_sidebar_menu
-                        // 但要注意潜在的事件重复绑定风险
-                        // if (typeof setup_sidebar_menu === 'function') {
-                        //    setup_sidebar_menu();
-                        // }
-                    }, 250); // 250ms 的防抖延迟
-
-                    $(window).on('resize', handleResize);
-                    // --- 结束添加监听器 ---
-
-                })
-                .catch(error => {
-                    console.error('加载或处理数据时出错:', error);
-                    $('#main-menu').html('<li><a href="#"><i class="linecons-alert"></i><span class="title">加载菜单失败</span></a></li>');
-                    $('#main-content-wrapper').html('<p class="text-danger">加载内容失败: ' + error.message + '</p>');
-                });
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('从API获取的数据:', data);
+                        initializePage(data);
+                    })
+                    .catch(error => {
+                        console.error('加载或处理数据时出错:', error);
+                        $('#main-menu').html('<li><a href="#"><i class="linecons-alert"></i><span class="title">加载菜单失败</span></a></li>');
+                        $('#main-content-wrapper').html('<p class="text-danger">加载内容失败: ' + error.message + '</p>');
+                    });
+            }
         }); // End document ready
+
 
         // --- Generation Functions ---
 
@@ -457,10 +617,20 @@
 
                 sectionHtml += `
                     <div class="col-sm-3">
-                        <div class="xe-widget xe-conversations box2 label-info" onclick="trackWebsiteClick('${site.title}', '${targetUrl}', '${categoryName}'); window.open('${targetUrl}', '_blank')" data-toggle="tooltip" data-placement="bottom" title="${targetUrl}">
+                        <div class="xe-widget xe-conversations box2 label-info"
+                             data-title="${site.title}"
+                             data-category="${categoryName}"
+                             data-main-url="${site.url || ''}"
+                             data-backup-url="${site.backup_url || ''}"
+                             data-internal-url="${site.internal_url || ''}"
+                             data-target-url="${targetUrl}"
+                             data-toggle="tooltip" data-placement="bottom" title="${targetUrl}">
                             <div class="xe-comment-entry">
                                 <a class="xe-user-img">
-                                    <img data-src="${logoSrc || '../assets/images/favicon.png'}" class="lozad img-circle" width="40">
+                                    ${logoSrc
+                                        ? `<img data-src="${logoSrc}" class="lozad img-circle" width="40">`
+                                        : `<img src="../assets/images/favicon.png" class="img-circle" width="40">`
+                                    }
                                 </a>
                                 <div class="xe-comment">
                                     <a href="#" class="xe-user-name overflowClip_1">
