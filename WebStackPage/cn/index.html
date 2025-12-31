@@ -107,6 +107,63 @@
         .quick-menu li.disabled:hover {
             background-color: transparent;
         }
+
+        .sidebar-menu.collapsed .logo .logo-expanded span {
+            display: none;
+        }
+
+        .sidebar-menu.collapsed .logo .logo-expanded {
+            justify-content: center;
+        }
+
+        .sidebar-menu.collapsed .logo .logo-expanded img {
+            margin-right: 0 !important;
+        }
+
+        .xe-widget {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            position: relative; /* Ensure relative positioning for absolute children */
+        }
+        
+        /* Switch button style */
+        .xe-switch-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 12px;
+            color: #999;
+            cursor: pointer;
+            line-height: 1.5;
+            transition: all 0.2s;
+            z-index: 5;
+            display: none; /* Hidden by default */
+        }
+        
+        .xe-widget:hover .xe-switch-btn {
+            display: block; /* Show on hover */
+            border-color: #ddd;
+            color: #666;
+        }
+
+        .xe-switch-btn:hover {
+            color: #2c2e2f !important;
+            border-color: #999 !important;
+            background-color: #f9f9f9;
+        }
+        
+        /* Mobile compatibility */
+        @media screen and (max-width: 768px) {
+            .xe-switch-btn {
+                display: block; /* Always show on mobile */
+                border-color: #f0f0f0;
+            }
+        }
     </style>
 </head>
 
@@ -351,8 +408,6 @@
                 $quickMenu.css({ left: left, top: top }).show();
             }
 
-            var longPressTimer = null;
-
             $(document).on('click', '.xe-widget', function (e) {
                 if ($(e.target).closest('#quick-link-menu').length) {
                     return;
@@ -375,21 +430,15 @@
                 showQuickMenu($card, e.clientX, e.clientY);
             });
 
-            $(document).on('touchstart', '.xe-widget', function (e) {
-                var that = this;
-                var touches = e.originalEvent.touches;
-                if (!touches || !touches[0]) return;
-                var touch = touches[0];
-                longPressTimer = setTimeout(function () {
-                    showQuickMenu($(that), touch.clientX, touch.clientY);
-                }, 600);
-            });
-
-            $(document).on('touchend touchmove touchcancel', '.xe-widget', function () {
-                if (longPressTimer) {
-                    clearTimeout(longPressTimer);
-                    longPressTimer = null;
-                }
+            $(document).on('click', '.xe-quick-btn, .xe-switch-btn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $card = $(this).closest('.xe-widget');
+                if (!$card.length) return;
+                var rect = this.getBoundingClientRect();
+                var pageX = rect.left + rect.width / 2;
+                var pageY = rect.bottom;
+                showQuickMenu($card, pageX, pageY);
             });
 
             $(document).on('click', '#quick-link-menu li', function (e) {
@@ -625,6 +674,9 @@
                              data-internal-url="${site.internal_url || ''}"
                              data-target-url="${targetUrl}"
                              data-toggle="tooltip" data-placement="bottom" title="${targetUrl}">
+                             <button type="button" class="xe-switch-btn">
+                                <span class="xe-quick-text">切换</span>
+                             </button>
                             <div class="xe-comment-entry">
                                 <a class="xe-user-img">
                                     ${logoSrc
@@ -633,11 +685,12 @@
                                     }
                                 </a>
                                 <div class="xe-comment">
-                                    <a href="#" class="xe-user-name overflowClip_1">
-                                        <strong>${site.title}</strong>
-                                    </a>
+                                    <div class="xe-comment-header">
+                                        <a href="#" class="xe-user-name overflowClip_1">
+                                            <strong>${site.title}</strong>
+                                        </a>
+                                    </div>
                                     <p class="overflowClip_2">${site.desc}</p>
-                                  
                                 </div>
                             </div>
                         </div>
