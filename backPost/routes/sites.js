@@ -356,9 +356,14 @@ router.post("/update-ports", async (req, res) => {
       try {
         const urlObj = new URL(url);
         const hostname = urlObj.hostname;
-        return targetDomains.some(
-          (domain) => hostname === domain || hostname.endsWith("." + domain)
-        );
+        return targetDomains.some((domain) => {
+          // 转义 domain 中的特殊字符
+          const escapedDomain = domain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          // 构建正则：匹配 domain 本身或其一级子域名
+          // ^(?:[^.]+\.)? 表示可选的非点字符序列加点号（即一级子域名）
+          const regex = new RegExp(`^(?:[^.]+\\.)?${escapedDomain}$`);
+          return regex.test(hostname);
+        });
       } catch (error) {
         return false;
       }
