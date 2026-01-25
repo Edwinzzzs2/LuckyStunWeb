@@ -31,6 +31,40 @@
     <![endif]-->
     <meta property="og:type" content="article">
     <script>
+        // 强制刷新缓存并重载页面
+        function hardRefresh() {
+            console.log('正在刷新...');
+            
+            // 注销 Service Worker
+            if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.getRegistration().then(function(reg) {
+                    if (reg) {
+                        reg.unregister().then(function() {
+                            console.log('Service Worker 已注销');
+                        });
+                    }
+                });
+            }
+            
+            // 清除所有缓存
+            if (window.caches) {
+                caches.keys().then(function(keys) {
+                    return Promise.all(keys.map(function(key) {
+                        console.log('删除缓存:', key);
+                        return caches.delete(key);
+                    }));
+                }).then(function() {
+                    console.log('缓存清除完毕，刷新页面');
+                    window.location.reload(true);
+                }).catch(function(e) {
+                    console.error('清除缓存出错:', e);
+                    window.location.reload(true);
+                });
+            } else {
+                window.location.reload(true);
+            }
+        }
+
         // 检查浏览器是否支持Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -175,7 +209,7 @@
                 <header class="logo-env">
                     <!-- logo -->
                     <div class="logo">
-                        <a href="index.html" class="logo-expanded" style="display: flex; align-items: center; text-decoration: none; transition: all 0.2s ease;" onmouseover="this.style.opacity='0.8';" onmouseout="this.style.opacity='1';">
+                        <a href="javascript:void(0);" onclick="hardRefresh();" class="logo-expanded" style="display: flex; align-items: center; text-decoration: none; transition: all 0.2s ease;" onmouseover="this.style.opacity='0.8';" onmouseout="this.style.opacity='1';">
                             <img src="../assets/images/favicon.png" width="24" height="24" alt="网址导航" style="margin-right: 12px; width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));" />
                             <span class="hidden-xs" style="font-size: 20px; font-weight: 600; color: #e5e5e5; letter-spacing: 1.2px; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; text-shadow: 0 1px 2px rgba(0,0,0,0.05);">网址导航</span>
                         </a>
